@@ -1,0 +1,5 @@
+Django==2.1.8
+pytz==2019.1
+sqlparse==0.3.0
+pyodbc==4.0.26
+django-pyodbc-azure
