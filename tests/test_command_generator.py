@@ -3,8 +3,8 @@ from django.db import connections
 
 from api.command_generator import CommandGenerator
 from api.description_utils import get_sql_from_file
-from desccriptions.fins import Fins
-from desccriptions.students_rup import StudentRup
+from descriptions.fins import Fins
+from descriptions.students_rup import StudentRup
 
 
 @pytest.mark.django_db
@@ -16,6 +16,7 @@ def test_description_only_field():
         res = generator.run(cursor, [])
         print(res)
         assert len(res) > 0 and res[0].keys() == fins.fields.keys()
+    # assert False
 
 
 @pytest.mark.django_db
