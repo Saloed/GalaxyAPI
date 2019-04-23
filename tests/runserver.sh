@@ -1,2 +1,2 @@
 #!/bin/bash
-python2 -mSimpleHTTPServer 8080
+python3 -m http.server 8080
