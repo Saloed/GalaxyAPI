@@ -1,13 +1,16 @@
 import json
-import requests
+from django.test import RequestFactory
 from jsonschema import validate
-
+from api.views import *
 
 def test_valid_schema_stipendia():
-    #json_data = json.load(open("stipends.ex.json"))
-    t=requests.get("http://localhost:8080/stipends.ex.json")
-    schema = json.load(open("stipendia.json"))
-    validate(t.json() , schema)
+    rf=RequestFactory()
+    args={'type':'json','endpoint':'ping'}
+    request=rf.get('/')
+    d=DispatchView()
+    resp = d.get(request,type="json",endpoint='ping')
+    schema = json.load(open("tests/pingpong.json"))
+    validate(json.loads(resp.content) , schema)
 
 if __name__ =="__main__":
     print (test_valid_schema_stipendia())
