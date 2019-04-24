@@ -148,3 +148,4 @@ def generate_endpoints():
         }
     except Exception as ex:
         return {}
+
