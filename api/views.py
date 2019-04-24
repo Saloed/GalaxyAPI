@@ -18,5 +18,7 @@ class DispatchView(View):
                 cursor.execute('SELECT Name FROM sys.Tables')
                 tables = cursor.fetchall()
                 return JsonResponse(tables, safe=False)
+        elif endpoint == "ping":
+            return JsonResponse({'status':"OK"})
 
         return NotImplementedHttpResponse(f'{request}')
