@@ -1,4 +1,3 @@
-import logging
 from api.query_execution import Param, RequiredParam
 
 
@@ -19,6 +18,8 @@ class Exact:
         self.required = required
 
     def convert_to_param(self):
+        # TODO: probably add equals and input symbol for folloing execution
+        # example: 'LoadPersons.F$wyeared' -> 'LoadPersons.F$wyeared = \''{}'\''
         return Param(self.name, self.condition, self.required)
 
 
@@ -54,8 +55,7 @@ class DescriptionProcessor:
     parsed_req_params = []
 
     def __init__(self, description):
-        self.log = logging.getLogger('description_processor')
-        self.log.debug("+ initialize description_processor")
+        self.description = description
         self.fields = getattr(description, 'fields')
         self.required_params = getattr(description, 'required_params', [])
         self.params = getattr(description, 'required_params', [])
@@ -85,20 +85,24 @@ class DescriptionProcessor:
                 self.parse_field_to_entry(root[key], entries, cur_level + 1)
             else:
                 entries.append(FieldEntry(key, key, str(root[key]), cur_level))
+
         return entries
 
     def parse_fields(self):
-        self.parsed_fields = self.parse_field_to_entry(self.fields, [], 0)
+        if self.fields:
+            self.parsed_fields = self.parse_field_to_entry(self.fields, [], 0)
+        else:
+            raise ValueError(f'Empty fields in Description class: {self.description}')
 
     def parse_params(self):
         if self.params:
             for param in self.params:
-                if isinstance(param, Custom):
-                    pass
-                elif isinstance(param, Exact):
-                    pass
+                if isinstance(param, Custom) or isinstance(param, Exact):
+                    self.parsed_params.append(param.convert_to_param())
                 else:
-                    pass
+                    raise ValueError("Illegal type in description params")
 
     def parse_req_params(self):
-        pass
+        if self.required_params:
+            for param in self.required_params:
+                self.parsed_req_params.append(RequiredParam(param))
