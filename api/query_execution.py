@@ -12,14 +12,15 @@ class Query:
 
 
 class Param:
-    def __init__(self, name: str, condition: str, value: Union[str, int]):
+    def __init__(self, name: str, condition: str, required: bool = False, value: Union[str, int] = None):
         self.name = name
         self.condition = condition
         self.value = value
+        self.required = required
 
 
 class RequiredParam:
-    def __init__(self, name: str, value: Union[str, int]):
+    def __init__(self, name: str, value: Union[str, int] = None):
         self.name = name
         self.value = value
 
@@ -90,6 +91,7 @@ class _SqlQuery:
         self.tokens = sqlparse.parse(paginated_sql)
 
     def execute(self, required_params, params):
+
         with connections['galaxy_db'].cursor() as cursor:
             cursor.execute(self.sql, required_params + params)
             columns = [col[0] for col in cursor.description]
