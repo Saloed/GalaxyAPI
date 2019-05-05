@@ -12,7 +12,7 @@ class Query:
 
 
 class Param:
-    def __init__(self, name: str, condition: str, required: bool = False, value: Union[str, int] = None):
+    def __init__(self, name: str, condition: str, value: Union[str, int], required: bool = False):
         self.name = name
         self.condition = condition
         self.value = value
@@ -20,7 +20,7 @@ class Param:
 
 
 class RequiredParam:
-    def __init__(self, name: str, value: Union[str, int] = None):
+    def __init__(self, name: str, value: Union[str, int]):
         self.name = name
         self.value = value
 
