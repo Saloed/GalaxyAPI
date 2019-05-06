@@ -29,7 +29,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.messages'
+    'django.contrib.messages',
+    'api'
 ]
 
 MIDDLEWARE = [
@@ -44,6 +45,15 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'galaxy_api.urls'
 
 WSGI_APPLICATION = 'galaxy_api.wsgi.application'
+
+# Queries directory settings
+
+QUERIES_DIR = os.path.join(BASE_DIR, 'queries')
+
+# Pagination settings
+
+PAGE_QUERY_PARAM = 'page'
+PAGE_SIZE = 20
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
