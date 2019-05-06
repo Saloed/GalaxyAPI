@@ -93,7 +93,6 @@ class _SqlQuery:
         self.tokens = sqlparse.parse(paginated_sql)
 
     def execute(self, required_params, params):
-
         with connections['galaxy_db'].cursor() as cursor:
             cursor.execute(self.sql, required_params + params)
             columns = [col[0] for col in cursor.description]
@@ -103,12 +102,19 @@ class _SqlQuery:
             ]
 
 
+def _fix_percents_signs(query):
+    query_text = query.replace('%s', '<$parameter_placeholder$>')
+    query_text = query_text.replace('%', '%%')
+    query_text = query_text.replace('<$parameter_placeholder$>', '%s')
+    return query_text
+
+
 def execute_query(
         query: Query, required_params: List[RequiredParam], params: List[Param], page: Page
 ) -> List[Dict[str, Any]]:
     with open(os.path.join(settings.QUERIES_DIR, 'sql', query.name), encoding='utf8') as sql_file:
         query_text = ''.join(sql_file.readlines())
-    query_text = query_text.replace('%', '%%')
+    query_text = _fix_percents_signs(query_text)
     sql_query = _SqlQuery(query_text)
     required_params_count = sql_query.count_required_params()
     if required_params_count != len(required_params):

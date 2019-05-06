@@ -1,8 +1,8 @@
 import builtins
 import inspect
 import os
+from typing import List, Dict, Any
 
-import requests
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.http import JsonResponse, HttpResponse
@@ -11,8 +11,9 @@ from django.views import View
 
 from api import description_parser
 from api import query_execution
+from api.endpoint_data_wrapper import EndpointSelectWrapper
 from api.models import *
-from api.utils import replace_query_param, replace_query_path, HttpHeaders
+from api.utils import replace_query_param
 
 
 class DispatchView(View):
@@ -52,39 +53,22 @@ class DispatchView(View):
             page_number = int(request_params.get(settings.PAGE_QUERY_PARAM, 0))
             page = query_execution.Page(endpoint.pagination_key, settings.PAGE_SIZE, page_number)
 
-        # query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
-        query_result = []
+        query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
 
-        selected_data = {
-            endpoint_select.select_from.name: self.select_from_endpoint(request, type, endpoint_select, query_result)
-            for endpoint_select in endpoint.endpoint_selects.all()
-        }
+        selected_data = EndpointSelectWrapper(type, endpoint.endpoint_selects.all())
+        selected_data.load(query_result, request)
 
-        data_with_pagination = self.paginate(request, query_result, page)
+        data = self.convert_data(type, query_result, selected_data, endpoint.schema)
+
+        data_with_pagination = self.paginate(request, data, page)
 
         # todo: XML response
         return JsonResponse(data_with_pagination, json_dumps_params={'ensure_ascii': False})
 
-    def select_from_endpoint(self, request, type, endpoint: EndpointSelect, data):
-        url = request.build_absolute_uri()
-        parameters = endpoint.parameters
-        query_keys =
-
-        # fixme: need to rewrite this
-        endpoint_path = f'/api/{type}/{endpoint.select_from.name}/'
-        endpoint_url = replace_query_path(url, endpoint_path)
-
-        headers = HttpHeaders(request.META).headers
-
-        result = requests.get(endpoint_url, headers=headers)
-        result.raise_for_status()
-
-
-
-        print(result)
-        a = 3
-
     def paginate(self, request, data, page):
+
+        # todo: XML pagination
+
         if page is None:
             return {
                 'has_next': False,
@@ -109,6 +93,26 @@ class DispatchView(View):
             'next': next_link,
             'data': data
         }
+
+    def convert_data(self, type, data: List[Dict[str, Any]],
+                     selected_data: EndpointSelectWrapper, schema: SchemaDescription):
+
+        if type != 'json':
+            # todo: implement for XML
+            return []
+
+        # todo: implement convertation according to schema. For now, schema is empty and convertation is dummy
+
+        # todo: normaly Select items are in schema.
+        select_items = selected_data.endpoints_data_wrappers.keys()
+        select_items = [description_parser.Select(it) for it in select_items]
+
+        for row in data:
+            for select_item in select_items:
+                selection_name = f'selected_{select_item.endpoint_name}'
+                row[selection_name] = selected_data.get_data(select_item, row)
+
+        return data
 
 
 class ManageLoadView(View):
