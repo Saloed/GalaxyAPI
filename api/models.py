@@ -20,6 +20,7 @@ class EndpointParameter(models.Model):
     condition = models.TextField(blank=True)
     required = models.BooleanField()
     sql_required = models.BooleanField()
+    position = models.PositiveSmallIntegerField(null=True)
 
     class Meta:
         unique_together = ['endpoint', 'name']

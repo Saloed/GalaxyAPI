@@ -42,10 +42,11 @@ class DispatchView(View):
             for param in parameters
             if not param.sql_required and param.name in request_params
         ]
+        sql_required_parameters = [param for param in parameters if param.sql_required]
+        sql_required_parameters.sort(key=lambda it: it.position)
         sql_required_parameters = [
             query_execution.RequiredParam(param.name, request_params[param.name])
-            for param in parameters
-            if param.sql_required
+            for param in sql_required_parameters
         ]
         query = query_execution.Query(endpoint.query.sql_file_name)
         page = None
@@ -183,7 +184,8 @@ class ManageLoadView(View):
                     name=param.name,
                     condition=param.condition,
                     required=param.required,
-                    sql_required=False
+                    sql_required=False,
+                    position=None
                 )
                 for param in desc.params_description
             ]
@@ -193,9 +195,10 @@ class ManageLoadView(View):
                     name=param.name,
                     condition='',
                     required=True,
-                    sql_required=True
+                    sql_required=True,
+                    position=i
                 )
-                for param in desc.required_params_description
+                for i, param in enumerate(desc.required_params_description)
             ]
 
             # todo: store field descriptions
