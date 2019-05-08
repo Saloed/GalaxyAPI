@@ -32,7 +32,7 @@ class Exact:
 
 
 class Select:
-    def __init__(self, endpoint_name, required_params):
+    def __init__(self, endpoint_name, **required_params):
         self.endpoint_name = endpoint_name
         self.required_params = required_params
 
@@ -51,17 +51,28 @@ class Db:
         self.type = type
 
 
+DESCRIPTION_CALLS = [
+    Custom,
+    Exact,
+    Db,
+    Select
+]
+
+
 class DescriptionParser:
-    fields_description = []
-    params_description = []
-    required_params_description = []
-    selects_description = []
 
     def __init__(self, description):
         self.description = description
+        self.name = description.__name__.lower()
+        self.pagination_key = description.pagination_key
+        self.sql = description.sql
         self.fields = getattr(description, 'fields')
         self.required_params = getattr(description, 'required_params', [])
         self.params = getattr(description, 'params', [])
+        self.fields_description = []
+        self.params_description = []
+        self.required_params_description = []
+        self.selects_description = []
         self.validate()
 
     def validate(self):

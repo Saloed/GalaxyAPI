@@ -1,22 +1,23 @@
+import os
 import re
 import sqlparse
 
 from typing import Union, List, Dict, Any
+
+from django.conf import settings
 from django.db import connections
 
 
 class Query:
-    def __init__(self, name: str, pagination_key: str):
+    def __init__(self, name: str):
         self.name = name
-        self.pagination_key = pagination_key
 
 
 class Param:
-    def __init__(self, name: str, condition: str, value: Union[str, int], required: bool = False):
+    def __init__(self, name: str, condition: str, value: Union[str, int]):
         self.name = name
         self.condition = condition
         self.value = value
-        self.required = required
 
 
 class RequiredParam:
@@ -26,7 +27,8 @@ class RequiredParam:
 
 
 class Page:
-    def __init__(self, size: int, number: int):
+    def __init__(self, pagination_key: str, size: int, number: int):
+        self.pagination_key = pagination_key
         self.size = size
         self.number = number
 
@@ -91,7 +93,6 @@ class _SqlQuery:
         self.tokens = sqlparse.parse(paginated_sql)
 
     def execute(self, required_params, params):
-
         with connections['galaxy_db'].cursor() as cursor:
             cursor.execute(self.sql, required_params + params)
             columns = [col[0] for col in cursor.description]
@@ -101,11 +102,19 @@ class _SqlQuery:
             ]
 
 
+def _fix_percents_signs(query):
+    query_text = query.replace('%s', '<$parameter_placeholder$>')
+    query_text = query_text.replace('%', '%%')
+    query_text = query_text.replace('<$parameter_placeholder$>', '%s')
+    return query_text
+
+
 def execute_query(
         query: Query, required_params: List[RequiredParam], params: List[Param], page: Page
 ) -> List[Dict[str, Any]]:
-    with open(f'queries/{query.name}', encoding='utf8') as sql_file:
+    with open(os.path.join(settings.QUERIES_DIR, 'sql', query.name), encoding='utf8') as sql_file:
         query_text = ''.join(sql_file.readlines())
+    query_text = _fix_percents_signs(query_text)
     sql_query = _SqlQuery(query_text)
     required_params_count = sql_query.count_required_params()
     if required_params_count != len(required_params):
@@ -116,6 +125,7 @@ def execute_query(
     if sql_query.may_apply_filters() and params:
         sql_query.add_filters([param.condition for param in params])
 
-    sql_query.paginate(query.pagination_key, page.size, page.number)
+    if page is not None:
+        sql_query.paginate(page.pagination_key, page.size, page.number)
 
     return sql_query.execute([param.value for param in required_params], [param.value for param in params])
