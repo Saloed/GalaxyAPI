@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
-from django.http import JsonResponse, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
 
@@ -13,6 +13,7 @@ from api import description_parser
 from api import query_execution
 from api.endpoint_data_wrapper import EndpointSelectWrapper
 from api.models import *
+from api.response import json_response, xml_response
 from api.utils import replace_query_param
 
 
@@ -59,17 +60,18 @@ class DispatchView(View):
         selected_data = EndpointSelectWrapper(type, endpoint.endpoint_selects.all())
         selected_data.load(query_result, request)
 
-        data = self.convert_data(type, query_result, selected_data, endpoint.schema)
+        data = self.convert_data(query_result, selected_data, endpoint.schema)
 
         data_with_pagination = self.paginate(request, data, page)
 
-        # todo: XML response
-        return JsonResponse(data_with_pagination, json_dumps_params={'ensure_ascii': False})
+        if type == 'json':
+            return json_response(data_with_pagination)
+        elif type == 'xml':
+            return xml_response(data_with_pagination, endpoint)
+        else:
+            raise ValueError(f"Unknown response type: {type}")
 
     def paginate(self, request, data, page):
-
-        # todo: XML pagination
-
         if page is None:
             return {
                 'has_next': False,
@@ -95,12 +97,8 @@ class DispatchView(View):
             'data': data
         }
 
-    def convert_data(self, type, data: List[Dict[str, Any]],
+    def convert_data(self, data: List[Dict[str, Any]],
                      selected_data: EndpointSelectWrapper, schema: SchemaDescription):
-
-        if type != 'json':
-            # todo: implement for XML
-            return []
 
         # todo: implement convertation according to schema. For now, schema is empty and convertation is dummy
 

@@ -23,8 +23,7 @@ class _EndpointDataWrapper:
         url = request.build_absolute_uri()
         key_set = set([self._selection_key(row) for row in data])
 
-        # fixme: need to rewrite this
-        endpoint_path = f'/api/{self.type}/{self.endpoint.select_from.name}/'
+        endpoint_path = f'/api/json/{self.endpoint.select_from.name}/'
         endpoint_url = replace_query_path(url, endpoint_path)
 
         headers = HttpHeaders(request.META).headers
@@ -43,16 +42,17 @@ class _EndpointDataWrapper:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         result = []
+        while True:
+            response_data = response.json()
+            result += response_data['data']
+            if not response_data['has_next']: break
+            response = requests.get(response_data['next'], headers)
+            response.raise_for_status()
+
         if self.type == 'json':
-            while True:
-                response_data = response.json()
-                result += response_data['data']
-                if not response_data['has_next']: break
-                response = requests.get(response_data['next'], headers)
-                response.raise_for_status()
-        else:
-            response_data = response.text
-            # todo: implement for other types (XML)
+            return result
+
+        # todo: implement for other types (XML)
 
         return result
 
