@@ -69,5 +69,5 @@ class EndpointSelectWrapper:
             data_wrapper.load_for(data, request)
 
     def get_data(self, select_item: description_parser.Select, data: dict):
-        data_wrapper = self.endpoints_data_wrappers[select_item.endpoint_name.lower()]
+        data_wrapper = self.endpoints_data_wrappers[select_item.endpoint_name]
         return data_wrapper.get_data(data)

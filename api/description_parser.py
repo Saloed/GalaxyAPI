@@ -63,7 +63,7 @@ class DescriptionParser:
 
     def __init__(self, description):
         self.description = description
-        self.name = description.__name__.lower()
+        self.name = description.__name__
         self.pagination_key = description.pagination_key
         self.sql = description.sql
         self.fields = getattr(description, 'fields')

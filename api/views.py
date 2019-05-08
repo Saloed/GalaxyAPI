@@ -24,7 +24,7 @@ class DispatchView(View):
         endpoint_query = Endpoint.objects.prefetch_related(
             'parameters', 'endpoint_selects', 'query', 'schema', 'endpoint_selects__select_from'
         )
-        endpoint = get_object_or_404(endpoint_query, name=endpoint)
+        endpoint = get_object_or_404(endpoint_query, name__iexact=endpoint)
 
         parameters = list(endpoint.parameters.all())
         request_params = request.GET
@@ -173,7 +173,7 @@ class ManageLoadView(View):
             selects += [
                 EndpointSelect(
                     endpoint_id=endpoint_id,
-                    select_from_id=endpoint_ids[select.endpoint_name.lower()],
+                    select_from_id=endpoint_ids[select.endpoint_name],
                     parameters=select.required_params
                 )
                 for select in desc.selects_description

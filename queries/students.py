@@ -61,7 +61,7 @@ class StudentAddress:
     required_params = ['id']
 
 
-class Students:
+class Student:
     sql = 'students.sql'
     pagination_key = 'NREC'
     fields = {
