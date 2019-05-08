@@ -6,3 +6,4 @@ django-pyodbc-azure==2.1.0.0
 sqlparse==0.3.0
 jsonfield==2.0.2
 requests==2.21.0
+dicttoxml==1.7.4
