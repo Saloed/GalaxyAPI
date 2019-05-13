@@ -95,7 +95,7 @@ class DescriptionParser:
                     entries.append(FieldEntryDescription(key, key, 'dict', cur_level))
                     parse_field_to_entry(root[key], entries, selects, cur_level + 1)
                 else:
-                    entries.append(FieldEntryDescription(key, key, str(root[key]), cur_level))
+                    entries.append(FieldEntryDescription(key, key, str(type(root[key])), cur_level))
             return entries, selects
 
         if self.fields:

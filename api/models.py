@@ -37,4 +37,7 @@ class EndpointSelect(models.Model):
 class SchemaDescription(models.Model):
     endpoint = models.OneToOneField(Endpoint, on_delete=models.CASCADE,
                                     related_name='schema', related_query_name='schema')
-    # todo: add fields
+    name = models.CharField(max_length=255)
+    db_name = models.CharField(max_length=255)
+    type = models.CharField(max_length=255)  # TODO: noot the best way fix that
+    level = models.PositiveSmallIntegerField()

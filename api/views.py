@@ -202,9 +202,16 @@ class ManageLoadView(View):
             ]
 
             # todo: store field descriptions
-            desc.fields_description
-            schemas.append(SchemaDescription(endpoint_id=endpoint_id))
-
+            schemas += [
+                SchemaDescription(
+                    endpoint_id=endpoint_id,
+                    name=entry.name,
+                    db_name=entry.db_name,
+                    type=entry.type,
+                    level=entry.level
+                )
+                for entry in desc.fields_description
+            ]
         EndpointParameter.objects.bulk_create(params)
         EndpointSelect.objects.bulk_create(selects)
         SchemaDescription.objects.bulk_create(schemas)
