@@ -1,7 +1,6 @@
 import builtins
 import inspect
 import os
-from typing import List, Dict, Any
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
@@ -9,13 +8,13 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
 
+import api.postprocessing as postprocessing
 from api import description_parser
 from api import query_execution
 from api.endpoint_data_wrapper import EndpointSelectWrapper
 from api.models import *
-from api.response import json_response, xml_response, XMLNamedNode
+from api.response import ResponseBuilder
 from api.utils import replace_query_param
-from api.utils import when_type
 
 
 class DispatchView(View):
@@ -61,17 +60,11 @@ class DispatchView(View):
         selected_data = EndpointSelectWrapper(type, endpoint.endpoint_selects.all())
         selected_data.load(query_result, request)
 
-        data = self.convert_data(query_result, selected_data, endpoint.schema)
-        if type == 'xml':
-            data = XMLNamedNode(data, endpoint.name)
+        data = postprocessing.convert_data(type, query_result, selected_data, endpoint)
 
         data_with_pagination = self.paginate(request, data, page)
 
-        return when_type(
-            type=type,
-            json=lambda: json_response(data_with_pagination),
-            xml=lambda: xml_response(data_with_pagination)
-        )
+        return ResponseBuilder(type).build(data_with_pagination)
 
     def paginate(self, request, data, page):
         if page is None:
@@ -99,21 +92,6 @@ class DispatchView(View):
             'data': data
         }
 
-    def convert_data(self, data: List[Dict[str, Any]],
-                     selected_data: EndpointSelectWrapper, schema: SchemaDescription):
-
-        # todo: implement convertation according to schema. For now, schema is empty and convertation is dummy
-
-        # todo: normaly Select items are in schema.
-        select_items = selected_data.endpoints_data_wrappers.keys()
-        select_items = [description_parser.Select(it) for it in select_items]
-
-        for row in data:
-            for select_item in select_items:
-                selection_name = f'selected_{select_item.endpoint_name}'
-                row[selection_name] = selected_data.get_data(select_item, row)
-
-        return data
 
 
 class ManageLoadView(View):
@@ -174,7 +152,8 @@ class ManageLoadView(View):
                 EndpointSelect(
                     endpoint_id=endpoint_id,
                     select_from_id=endpoint_ids[select.endpoint_name],
-                    parameters=select.required_params
+                    parameters=select.required_params,
+                    select_to_field_name=select.field_name
                 )
                 for select in desc.selects_description
             ]

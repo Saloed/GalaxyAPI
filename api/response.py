@@ -2,24 +2,13 @@ import dicttoxml
 
 from django.http import JsonResponse, HttpResponse
 
+from api.utils import BuilderTypeSelector, XMLNamedNode
+
 
 class XmlResponse(HttpResponse):
     def __init__(self, data, **kwargs):
         kwargs.setdefault('content_type', 'application/xml')
         super().__init__(content=data, **kwargs)
-
-
-def json_response(data):
-    return JsonResponse(data, json_dumps_params={'ensure_ascii': False})
-
-
-class XMLNamedNode:
-    def __init__(self, node, name):
-        self.node = node
-        self.name = name
-
-    def __len__(self):
-        return len(self.node)
 
 
 def _make_xml_item_selector(parent_to_name):
@@ -51,9 +40,14 @@ def _recollect_named_nodes(root, parent_name, parent_to_name: dict):
         return root
 
 
-def xml_response(data):
-    parent_to_name = {}
-    data_without_named_nodes = _recollect_named_nodes(data, None, parent_to_name)
-    name_selector = _make_xml_item_selector(parent_to_name)
-    xml_data = dicttoxml.dicttoxml(data_without_named_nodes, attr_type=False, item_func=name_selector)
-    return XmlResponse(xml_data)
+class ResponseBuilder(BuilderTypeSelector):
+
+    def build_xml(self, data):
+        parent_to_name = {}
+        data_without_named_nodes = _recollect_named_nodes(data, None, parent_to_name)
+        name_selector = _make_xml_item_selector(parent_to_name)
+        xml_data = dicttoxml.dicttoxml(data_without_named_nodes, attr_type=False, item_func=name_selector)
+        return XmlResponse(xml_data)
+
+    def build_json(self, data):
+        return JsonResponse(data, json_dumps_params={'ensure_ascii': False})

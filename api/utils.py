@@ -46,15 +46,21 @@ class HttpHeaders:
         return header.replace('_', '-').title()
 
 
-def when(condition, _else, **branches):
-    for key, expression in branches.items():
-        if key == condition:
-            return expression()
-    return _else()
+class BuilderTypeSelector:
+    def __init__(self, type):
+        self._type = type
+
+    def build(self, *args, **kwargs):
+        attr_name = f'build_{self._type}'
+        if not hasattr(self, attr_name):
+            raise ValueError(f"Unknown response type: {type}")
+        return getattr(self, attr_name)(*args, **kwargs)
 
 
-def when_type(type, **branches):
-    def unknown_type():
-        raise ValueError(f"Unknown response type: {type}")
+class XMLNamedNode:
+    def __init__(self, node, name):
+        self.node = node
+        self.name = name
 
-    return when(type, _else=unknown_type, **branches)
+    def __len__(self):
+        return len(self.node)

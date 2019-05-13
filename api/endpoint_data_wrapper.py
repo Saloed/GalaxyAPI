@@ -1,9 +1,55 @@
 import requests
 
 from api import description_parser
-from api.models import EndpointSelect
-from api.utils import replace_query_path, HttpHeaders, replace_query_params, when_type
-from api.response import XMLNamedNode
+from api.models import EndpointSelect, Endpoint
+from api.utils import HttpHeaders, XMLNamedNode, BuilderTypeSelector
+from api.utils import replace_query_path, replace_query_params
+
+
+class _EndpointDependency:
+    def __init__(self, filed_name, endpoint, children):
+        self.endpoint = endpoint
+        self.filed_name = filed_name
+        self.children = children
+
+
+def _get_endpoints_recursively(endpoint: Endpoint, name=None):
+    children = endpoint.endpoint_selects.prefetch_related('select_from').all()
+    children = [
+        _get_endpoints_recursively(select.select_from, select.select_to_field_name)
+        for select in children
+    ]
+    children = {it.filed_name: it for it in children}
+    if name is not None:
+        return _EndpointDependency(name, endpoint, children)
+    return {None: _EndpointDependency(name, endpoint, children)}
+
+
+def _rebuild_xml_result(root, parent_key, endpoint_dependency):
+    if isinstance(root, dict):
+        return {
+            key: _rebuild_xml_result(value, key, endpoint_dependency)
+            for key, value in root.items()
+        }
+    elif isinstance(root, (list, tuple)):
+        endpoint = endpoint_dependency[parent_key]
+        data = [
+            _rebuild_xml_result(it, None, endpoint.children)
+            for it in root
+        ]
+        return XMLNamedNode(data, endpoint.endpoint.name)
+    else:
+        return root
+
+
+class _EndpointDataResultBuilder(BuilderTypeSelector):
+
+    def build_json(self, data, *args, **kwargs):
+        return data
+
+    def build_xml(self, data, endpoint: Endpoint):
+        dependency = _get_endpoints_recursively(endpoint)
+        return _rebuild_xml_result(data, None, dependency)
 
 
 class _EndpointDataWrapper:
@@ -46,14 +92,10 @@ class _EndpointDataWrapper:
             response_data = response.json()
             result += response_data['data']
             if not response_data['has_next']: break
-            response = requests.get(response_data['next'], headers)
+            response = requests.get(response_data['next'], headers=headers)
             response.raise_for_status()
 
-        return when_type(
-            type=self._type,
-            json=lambda: result,
-            xml=lambda: XMLNamedNode(result, self._name)
-        )
+        return _EndpointDataResultBuilder(self._type).build(result, self._endpoint.select_from)
 
 
 class EndpointSelectWrapper:

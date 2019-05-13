@@ -32,6 +32,7 @@ class EndpointSelect(models.Model):
     select_from = models.ForeignKey(Endpoint, on_delete=models.CASCADE,
                                     related_name='dependent', related_query_name='dependent')
     parameters = jsonfield.JSONField()
+    select_to_field_name = models.CharField(max_length=255)
 
 
 class SchemaDescription(models.Model):
