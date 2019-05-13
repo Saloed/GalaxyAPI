@@ -13,8 +13,9 @@ from api import description_parser
 from api import query_execution
 from api.endpoint_data_wrapper import EndpointSelectWrapper
 from api.models import *
-from api.response import json_response, xml_response
+from api.response import json_response, xml_response, XMLNamedNode
 from api.utils import replace_query_param
+from api.utils import when_type
 
 
 class DispatchView(View):
@@ -25,7 +26,7 @@ class DispatchView(View):
         endpoint_query = Endpoint.objects.prefetch_related(
             'parameters', 'endpoint_selects', 'query', 'schema', 'endpoint_selects__select_from'
         )
-        endpoint = get_object_or_404(endpoint_query, name=endpoint)
+        endpoint = get_object_or_404(endpoint_query, name__iexact=endpoint)
 
         parameters = list(endpoint.parameters.all())
         request_params = request.GET
@@ -61,15 +62,16 @@ class DispatchView(View):
         selected_data.load(query_result, request)
 
         data = self.convert_data(query_result, selected_data, endpoint.schema)
+        if type == 'xml':
+            data = XMLNamedNode(data, endpoint.name)
 
         data_with_pagination = self.paginate(request, data, page)
 
-        if type == 'json':
-            return json_response(data_with_pagination)
-        elif type == 'xml':
-            return xml_response(data_with_pagination, endpoint)
-        else:
-            raise ValueError(f"Unknown response type: {type}")
+        return when_type(
+            type=type,
+            json=lambda: json_response(data_with_pagination),
+            xml=lambda: xml_response(data_with_pagination)
+        )
 
     def paginate(self, request, data, page):
         if page is None:
@@ -171,7 +173,7 @@ class ManageLoadView(View):
             selects += [
                 EndpointSelect(
                     endpoint_id=endpoint_id,
-                    select_from_id=endpoint_ids[select.endpoint_name.lower()],
+                    select_from_id=endpoint_ids[select.endpoint_name],
                     parameters=select.required_params
                 )
                 for select in desc.selects_description

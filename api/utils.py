@@ -44,3 +44,17 @@ class HttpHeaders:
         elif header not in cls.UNPREFIXED_HEADERS:
             return None
         return header.replace('_', '-').title()
+
+
+def when(condition, _else, **branches):
+    for key, expression in branches.items():
+        if key == condition:
+            return expression()
+    return _else()
+
+
+def when_type(type, **branches):
+    def unknown_type():
+        raise ValueError(f"Unknown response type: {type}")
+
+    return when(type, _else=unknown_type, **branches)
