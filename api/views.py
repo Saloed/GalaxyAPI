@@ -102,18 +102,40 @@ class DispatchView(View):
             # todo: implement for XML
             return []
 
-        # todo: implement convertation according to schema. For now, schema is empty and convertation is dummy
-
-        # todo: normaly Select items are in schema.
         select_items = selected_data.endpoints_data_wrappers.keys()
         select_items = [description_parser.Select(it) for it in select_items]
+
+        result = []
+
+        def build_data_by_schema(row, i, lvl, scheme):
+            res = {}
+            while i < len(scheme) and scheme[i].level == lvl:
+                name = scheme[i].name
+                if scheme[i].type is 'dict':
+                    res[name], i = build_data_by_schema(row, i + 1, scheme[i].level + 1, scheme)
+                    continue
+                elif scheme[i].type is 'Select':
+                    # TODO: end this thing
+                    # selection_name = f'selected_{scheme[i].value}'
+                    # res[selection_name] = selected_data.get_data(select_item, row)
+                    pass
+                elif schema[i].type is 'Db':
+                    value = schema[i].value
+                    res[name] = row[value]
+                else:
+                    res[name] = row[name]
+                i += 1
+            return res, i
+
+        for row in data:
+            result.append(build_data_by_schema(row, 0, 0, schema, select_items)[0])
 
         for row in data:
             for select_item in select_items:
                 selection_name = f'selected_{select_item.endpoint_name}'
                 row[selection_name] = selected_data.get_data(select_item, row)
 
-        return data
+        return result
 
 
 class ManageLoadView(View):
@@ -206,7 +228,7 @@ class ManageLoadView(View):
                 SchemaDescription(
                     endpoint_id=endpoint_id,
                     name=entry.name,
-                    db_name=entry.db_name,
+                    value=entry.value,
                     type=entry.type,
                     level=entry.level
                 )
