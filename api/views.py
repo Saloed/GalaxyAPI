@@ -59,7 +59,7 @@ class DispatchView(View):
         selected_data = EndpointSelectWrapper(type, endpoint.endpoint_selects.all())
         selected_data.load(query_result, request)
 
-        data = self.convert_data(type, query_result, selected_data, endpoint.schema)
+        data = self.convert_data(type, query_result, selected_data, endpoint.schema.all())
 
         data_with_pagination = self.paginate(request, data, page)
 
@@ -96,14 +96,11 @@ class DispatchView(View):
         }
 
     def convert_data(self, type, data: List[Dict[str, Any]],
-                     selected_data: EndpointSelectWrapper, schema: SchemaDescription):
+                     selected_data: EndpointSelectWrapper, schema: [SchemaEntry]):
 
         if type != 'json':
             # todo: implement for XML
             return []
-
-        select_items = selected_data.endpoints_data_wrappers.keys()
-        select_items = [description_parser.Select(it) for it in select_items]
 
         result = []
 
@@ -115,9 +112,8 @@ class DispatchView(View):
                     res[name], i = build_data_by_schema(row, i + 1, scheme[i].level + 1, scheme)
                     continue
                 elif scheme[i].type is 'Select':
-                    # TODO: end this thing
-                    # selection_name = f'selected_{scheme[i].value}'
-                    # res[selection_name] = selected_data.get_data(select_item, row)
+                    selection_name = f'selected_{scheme[i].value}'
+                    res[selection_name] = selected_data.get_data(scheme[i].value, row)
                     pass
                 elif schema[i].type is 'Db':
                     value = schema[i].value
@@ -128,12 +124,7 @@ class DispatchView(View):
             return res, i
 
         for row in data:
-            result.append(build_data_by_schema(row, 0, 0, schema, select_items)[0])
-
-        for row in data:
-            for select_item in select_items:
-                selection_name = f'selected_{select_item.endpoint_name}'
-                row[selection_name] = selected_data.get_data(select_item, row)
+            result.append(build_data_by_schema(row, 0, 0, schema)[0])
 
         return result
 
