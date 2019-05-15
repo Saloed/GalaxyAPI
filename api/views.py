@@ -1,13 +1,18 @@
 import builtins
 import inspect
 import os
+
 from typing import List, Dict, Any
+
+import coreapi
+import coreschema
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.http import JsonResponse, HttpResponse
-from django.shortcuts import get_object_or_404
 from django.views import View
+from rest_framework.schemas import ManualSchema
+from rest_framework.views import APIView
 
 from api import description_parser
 from api import query_execution
@@ -16,17 +21,12 @@ from api.models import *
 from api.utils import replace_query_param
 
 
-class DispatchView(View):
-    http_method_names = ['get']
+class EndpointView(APIView):
+    endpoint: Endpoint = None
 
-    def get(self, request, type, endpoint, *args, **kwargs):
-
-        endpoint_query = Endpoint.objects.prefetch_related(
-            'parameters', 'endpoint_selects', 'query', 'schema', 'endpoint_selects__select_from'
-        )
-        endpoint = get_object_or_404(endpoint_query, name__iexact=endpoint)
-
-        parameters = list(endpoint.parameters.all())
+    def get(self, request, *args, **kwargs):
+        type = 'json'
+        parameters = self.endpoint.parameters.all()
         request_params = request.GET
 
         unspecified_parameters = [
@@ -48,18 +48,18 @@ class DispatchView(View):
             query_execution.RequiredParam(param.name, request_params[param.name])
             for param in sql_required_parameters
         ]
-        query = query_execution.Query(endpoint.query.sql_file_name)
+        query = query_execution.Query(self.endpoint.query.sql_file_name)
         page = None
-        if endpoint.pagination_key is not None:
+        if self.endpoint.pagination_key is not None:
             page_number = int(request_params.get(settings.PAGE_QUERY_PARAM, 0))
-            page = query_execution.Page(endpoint.pagination_key, settings.PAGE_SIZE, page_number)
+            page = query_execution.Page(self.endpoint.pagination_key, settings.PAGE_SIZE, page_number)
 
         query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
 
-        selected_data = EndpointSelectWrapper(type, endpoint.endpoint_selects.all())
+        selected_data = EndpointSelectWrapper(type, self.endpoint.endpoint_selects.all())
         selected_data.load(query_result, request)
 
-        data = self.convert_data(type, query_result, selected_data, endpoint.schema)
+        data = self.convert_data(type, query_result, selected_data, self.endpoint.schema)
 
         data_with_pagination = self.paginate(request, data, page)
 
@@ -114,6 +114,45 @@ class DispatchView(View):
                 row[selection_name] = selected_data.get_data(select_item, row)
 
         return data
+
+
+def _generate_endpoint(endpoint: Endpoint):
+    parameters = endpoint.parameters.all()
+    endpoint_parameter_fields = [
+        coreapi.Field(
+            param.name,
+            required=param.required,
+            location="query",
+            schema=coreschema.String()
+        )
+        for param in parameters
+    ]
+    pagination_parameters = []
+    if endpoint.pagination_key is not None:
+        pagination_parameters = [
+            coreapi.Field(
+                settings.PAGE_QUERY_PARAM,
+                required=False,
+                location="query",
+                schema=coreschema.Integer(description='Pagination page number', default=0)
+            )
+        ]
+    schema = ManualSchema(
+        fields=endpoint_parameter_fields + pagination_parameters,
+        description=f'{endpoint.name} endpoint',
+        encoding='UTF-8'
+    )
+    return EndpointView.as_view(endpoint=endpoint, schema=schema)
+
+
+def generate_endpoints():
+    endpoints = Endpoint.objects.all().prefetch_related(
+        'parameters', 'endpoint_selects', 'query', 'schema', 'endpoint_selects__select_from'
+    )
+    return {
+        ep.name: _generate_endpoint(ep)
+        for ep in endpoints
+    }
 
 
 class ManageLoadView(View):
