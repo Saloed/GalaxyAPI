@@ -34,8 +34,9 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.auth',
     'django.contrib.staticfiles',
-    'api',
-    'rest_framework_swagger'
+    'rest_framework',
+    'rest_framework_swagger',
+    'api'
 ]
 
 STATIC_URL = '/static/'

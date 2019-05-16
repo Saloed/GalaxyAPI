@@ -1,31 +1,34 @@
 import builtins
 import inspect
 import os
-
 from typing import List, Dict, Any
 
 import coreapi
 import coreschema
-
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
-from django.http import JsonResponse, HttpResponse
+from django.http import HttpResponse
 from django.views import View
+from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
+from rest_framework.response import Response
 from rest_framework.schemas import ManualSchema
 from rest_framework.views import APIView
+from rest_framework.settings import api_settings
 
 from api import description_parser
 from api import query_execution
 from api.endpoint_data_wrapper import EndpointSelectWrapper
 from api.models import *
+from api.renderers import ApiXmlRenderer
 from api.utils import replace_query_param
 
 
 class EndpointView(APIView):
+    renderer_classes = [JSONRenderer, ApiXmlRenderer, BrowsableAPIRenderer]
+
     endpoint: Endpoint = None
 
     def get(self, request, *args, **kwargs):
-        type = 'json'
         parameters = self.endpoint.parameters.all()
         request_params = request.GET
 
@@ -56,15 +59,14 @@ class EndpointView(APIView):
 
         query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
 
-        selected_data = EndpointSelectWrapper(type, self.endpoint.endpoint_selects.all())
+        selected_data = EndpointSelectWrapper(self.endpoint.endpoint_selects.all())
         selected_data.load(query_result, request)
 
-        data = self.convert_data(type, query_result, selected_data, self.endpoint.schema)
+        data = self.convert_data(query_result, selected_data, self.endpoint.schema)
 
         data_with_pagination = self.paginate(request, data, page)
 
-        # todo: XML response
-        return JsonResponse(data_with_pagination, json_dumps_params={'ensure_ascii': False})
+        return Response(data_with_pagination)
 
     def paginate(self, request, data, page):
 
@@ -95,12 +97,8 @@ class EndpointView(APIView):
             'data': data
         }
 
-    def convert_data(self, type, data: List[Dict[str, Any]],
+    def convert_data(self, data: List[Dict[str, Any]],
                      selected_data: EndpointSelectWrapper, schema: SchemaDescription):
-
-        if type != 'json':
-            # todo: implement for XML
-            return []
 
         # todo: implement convertation according to schema. For now, schema is empty and convertation is dummy
 
@@ -137,8 +135,16 @@ def _generate_endpoint(endpoint: Endpoint):
                 schema=coreschema.Integer(description='Pagination page number', default=0)
             )
         ]
+    format_parameters = [
+        coreapi.Field(
+            api_settings.URL_FORMAT_OVERRIDE,
+            required=False,
+            location="query",
+            schema=coreschema.ExclusiveUnion(['json', 'xml'], description='Response format')
+        )
+    ]
     schema = ManualSchema(
-        fields=endpoint_parameter_fields + pagination_parameters,
+        fields=endpoint_parameter_fields + pagination_parameters + format_parameters,
         description=f'{endpoint.name} endpoint',
         encoding='UTF-8'
     )
@@ -213,7 +219,8 @@ class ManageLoadView(View):
                 EndpointSelect(
                     endpoint_id=endpoint_id,
                     select_from_id=endpoint_ids[select.endpoint_name],
-                    parameters=select.required_params
+                    parameters=select.required_params,
+                    select_to_field_name=select.field_name
                 )
                 for select in desc.selects_description
             ]
