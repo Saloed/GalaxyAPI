@@ -39,9 +39,12 @@ class Select:
 
 
 class FieldEntryDescription:
-    def __init__(self, name, db_name, type, level):
+    def __init__(self, name, value, type, level):
         self.name = name
-        self.db_name = db_name
+        """value field: in case of Select type used to store endpoint_name, 
+        in case DB used to store db_name
+        otherwise same as name"""
+        self.value = value
         self.type = type
         self.level = level
 
@@ -91,13 +94,13 @@ class DescriptionParser:
                     entries.append(FieldEntryDescription(key, root[key].name, 'Db', cur_level))
                 elif isinstance(root[key], Select):
                     root[key].field_name = key
-                    entries.append(FieldEntryDescription(key, key, 'Select', cur_level))
+                    entries.append(FieldEntryDescription(key, root[key].endpoint_name, 'Select', cur_level))
                     selects.append(root[key])
                 elif isinstance(root[key], dict):
                     entries.append(FieldEntryDescription(key, key, 'dict', cur_level))
                     parse_field_to_entry(root[key], entries, selects, cur_level + 1)
                 else:
-                    entries.append(FieldEntryDescription(key, key, str(root[key]), cur_level))
+                    entries.append(FieldEntryDescription(key, key, str(type(root[key])), cur_level))
             return entries, selects
 
         if self.fields:
