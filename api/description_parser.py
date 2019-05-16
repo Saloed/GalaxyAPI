@@ -35,6 +35,7 @@ class Select:
     def __init__(self, endpoint_name, **required_params):
         self.endpoint_name = endpoint_name
         self.required_params = required_params
+        self.field_name = None
 
 
 class FieldEntryDescription:
@@ -89,6 +90,7 @@ class DescriptionParser:
                 if isinstance(root[key], Db):
                     entries.append(FieldEntryDescription(key, root[key].name, 'Db', cur_level))
                 elif isinstance(root[key], Select):
+                    root[key].field_name = key
                     entries.append(FieldEntryDescription(key, key, 'Select', cur_level))
                     selects.append(root[key])
                 elif isinstance(root[key], dict):

@@ -6,10 +6,9 @@ from api.utils import replace_query_path, HttpHeaders, replace_query_params
 
 
 class _EndpointDataWrapper:
-    def __init__(self, type, endpoint: EndpointSelect):
+    def __init__(self, endpoint: EndpointSelect):
         self.endpoint = endpoint
         self._parameters = sorted(self.endpoint.parameters.items())
-        self.type = type
         self.endpoint_data = {}
 
     def _selection_key(self, data):
@@ -23,9 +22,9 @@ class _EndpointDataWrapper:
         url = request.build_absolute_uri()
         key_set = set([self._selection_key(row) for row in data])
 
-        # fixme: need to rewrite this
-        endpoint_path = f'/api/{self.type}/{self.endpoint.select_from.name}/'
+        endpoint_path = f'/api/{self.endpoint.select_from.name}'
         endpoint_url = replace_query_path(url, endpoint_path)
+        endpoint_url = replace_query_params(endpoint_url, {'format': 'json'})
 
         headers = HttpHeaders(request.META).headers
 
@@ -43,24 +42,20 @@ class _EndpointDataWrapper:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         result = []
-        if self.type == 'json':
-            while True:
-                response_data = response.json()
-                result += response_data['data']
-                if not response_data['has_next']: break
-                response = requests.get(response_data['next'], headers)
-                response.raise_for_status()
-        else:
-            response_data = response.text
-            # todo: implement for other types (XML)
+        while True:
+            response_data = response.json()
+            result += response_data['data']
+            if not response_data['has_next']: break
+            response = requests.get(response_data['next'], headers)
+            response.raise_for_status()
 
         return result
 
 
 class EndpointSelectWrapper:
-    def __init__(self, type, endpoints):
+    def __init__(self, endpoints):
         self.endpoints_data_wrappers = {
-            endpoint_select.select_from.name: _EndpointDataWrapper(type, endpoint_select)
+            endpoint_select.select_from.name: _EndpointDataWrapper(endpoint_select)
             for endpoint_select in endpoints
         }
 

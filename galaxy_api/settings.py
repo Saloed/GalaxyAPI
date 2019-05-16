@@ -30,8 +30,17 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.messages',
+    'django.contrib.contenttypes',
+    'django.contrib.sites',
+    'django.contrib.auth',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_swagger',
     'api'
 ]
+
+STATIC_URL = '/static/'
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -45,6 +54,26 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'galaxy_api.urls'
 
 WSGI_APPLICATION = 'galaxy_api.wsgi.application'
+
+TEMPLATE_LOADERS = [
+    'django.template.loaders.app_directories.Loader'
+]
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
 # Queries directory settings
 
