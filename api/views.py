@@ -12,8 +12,8 @@ from django.views import View
 from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
 from rest_framework.response import Response
 from rest_framework.schemas import ManualSchema
-from rest_framework.views import APIView
 from rest_framework.settings import api_settings
+from rest_framework.views import APIView
 
 from api import description_parser
 from api import query_execution
@@ -62,7 +62,7 @@ class EndpointView(APIView):
         selected_data = EndpointSelectWrapper(self.endpoint.endpoint_selects.all())
         selected_data.load(query_result, request)
 
-        data = self.convert_data(query_result, selected_data, self.endpoint.schema)
+        data = self.convert_data(query_result, selected_data)
 
         data_with_pagination = self.paginate(request, data, page)
 
@@ -97,21 +97,35 @@ class EndpointView(APIView):
             'data': data
         }
 
-    def convert_data(self, data: List[Dict[str, Any]],
-                     selected_data: EndpointSelectWrapper, schema: SchemaDescription):
+    def convert_data(self, data: List[Dict[str, Any]], selected_data: EndpointSelectWrapper):
 
-        # todo: implement convertation according to schema. For now, schema is empty and convertation is dummy
+        schema: [SchemaEntry] = list(self.endpoint.schema.entries.all())
 
-        # todo: normaly Select items are in schema.
-        select_items = selected_data.endpoints_data_wrappers.keys()
-        select_items = [description_parser.Select(it) for it in select_items]
+        def build_data_by_schema(row, i, lvl, scheme):
+            res = {}
+            while i < len(scheme) and scheme[i].level == lvl:
+                name = scheme[i].name
+                if scheme[i].type == 'dict':
+                    res[name], i = build_data_by_schema(row, i + 1, scheme[i].level + 1, scheme)
+                    continue
+                elif scheme[i].type == 'Select':
+                    endpoint_name = schema[i].value
+                    field_name = schema[i].name
+                    res[field_name] = selected_data.get_data(endpoint_name, row)
+                elif schema[i].type == 'Db':
+                    value = schema[i].value
+                    res[name] = row[value]
+                else:
+                    res[name] = row[name]
+                i += 1
+            return res, i
 
-        for row in data:
-            for select_item in select_items:
-                selection_name = f'selected_{select_item.endpoint_name}'
-                row[selection_name] = selected_data.get_data(select_item, row)
+        result = [
+            build_data_by_schema(row, 0, 0, schema)[0]
+            for row in data
+        ]
 
-        return data
+        return result
 
 
 def _generate_endpoint(endpoint: Endpoint):
@@ -212,7 +226,7 @@ class ManageLoadView(View):
         Endpoint.objects.bulk_create(endpoints)
         endpoint_ids = dict(Endpoint.objects.values_list('name', 'id'))
 
-        schemas, selects, params = [], [], []
+        entries, selects, params = [], [], []
         for desc in descriptions:
             endpoint_id = endpoint_ids[desc.name]
             selects += [
@@ -247,13 +261,23 @@ class ManageLoadView(View):
                 for i, param in enumerate(desc.required_params_description)
             ]
 
+            schema = SchemaDescription.objects.create(endpoint_id=endpoint_id)
+
             # todo: store field descriptions
-            desc.fields_description
-            schemas.append(SchemaDescription(endpoint_id=endpoint_id))
+            entries += [
+                SchemaEntry(
+                    schema_name=schema,
+                    name=entry.name,
+                    value=entry.value,
+                    type=entry.type,
+                    level=entry.level
+                )
+                for entry in desc.fields_description
+            ]
 
         EndpointParameter.objects.bulk_create(params)
         EndpointSelect.objects.bulk_create(selects)
-        SchemaDescription.objects.bulk_create(schemas)
+        SchemaEntry.objects.bulk_create(entries)
 
     def get(self, request, *args, **kwargs):
         self.drop_everything()

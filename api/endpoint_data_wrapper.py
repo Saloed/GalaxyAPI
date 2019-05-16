@@ -63,6 +63,6 @@ class EndpointSelectWrapper:
         for data_wrapper in self.endpoints_data_wrappers.values():
             data_wrapper.load_for(data, request)
 
-    def get_data(self, select_item: description_parser.Select, data: dict):
-        data_wrapper = self.endpoints_data_wrappers[select_item.endpoint_name]
+    def get_data(self, endpoint_name, data: dict):
+        data_wrapper = self.endpoints_data_wrappers[endpoint_name]
         return data_wrapper.get_data(data)

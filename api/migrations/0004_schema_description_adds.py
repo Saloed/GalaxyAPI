@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0002_endpointparameter_position'),
+        ('api', '0003_endpointselect_select_to_field_name'),
     ]
 
     operations = [
