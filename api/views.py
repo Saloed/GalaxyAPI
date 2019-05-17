@@ -3,16 +3,12 @@ import inspect
 import os
 from typing import List, Dict, Any
 
-import coreapi
-import coreschema
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.http import HttpResponse
 from django.views import View
-from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
-from rest_framework.schemas import ManualSchema
-from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 
 from api import description_parser
@@ -20,13 +16,15 @@ from api import query_execution
 from api.endpoint_data_wrapper import EndpointSelectWrapper
 from api.models import *
 from api.renderers import ApiXmlRenderer
+from api.swagger import ApiSwaggerAutoSchema
 from api.utils import replace_query_param
 
 
 class EndpointView(APIView):
-    renderer_classes = [JSONRenderer, ApiXmlRenderer, BrowsableAPIRenderer]
+    renderer_classes = [JSONRenderer, ApiXmlRenderer]
 
     endpoint: Endpoint = None
+    swagger_schema = ApiSwaggerAutoSchema
 
     def get(self, request, *args, **kwargs):
         parameters = self.endpoint.parameters.all()
@@ -55,7 +53,8 @@ class EndpointView(APIView):
         page = None
         if self.endpoint.pagination_key is not None:
             page_number = int(request_params.get(settings.PAGE_QUERY_PARAM, 0))
-            page = query_execution.Page(self.endpoint.pagination_key, settings.PAGE_SIZE, page_number)
+            page_size = int(request_params.get(settings.PAGE_SIZE_QUERY_PARAM, settings.DEFAULT_PAGE_SIZE))
+            page = query_execution.Page(self.endpoint.pagination_key, page_size, page_number)
 
         query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
 
@@ -69,9 +68,6 @@ class EndpointView(APIView):
         return Response(data_with_pagination)
 
     def paginate(self, request, data, page):
-
-        # todo: XML pagination
-
         if page is None:
             return {
                 'has_next': False,
@@ -128,49 +124,13 @@ class EndpointView(APIView):
         return result
 
 
-def _generate_endpoint(endpoint: Endpoint):
-    parameters = endpoint.parameters.all()
-    endpoint_parameter_fields = [
-        coreapi.Field(
-            param.name,
-            required=param.required,
-            location="query",
-            schema=coreschema.String()
-        )
-        for param in parameters
-    ]
-    pagination_parameters = []
-    if endpoint.pagination_key is not None:
-        pagination_parameters = [
-            coreapi.Field(
-                settings.PAGE_QUERY_PARAM,
-                required=False,
-                location="query",
-                schema=coreschema.Integer(description='Pagination page number', default=0)
-            )
-        ]
-    format_parameters = [
-        coreapi.Field(
-            api_settings.URL_FORMAT_OVERRIDE,
-            required=False,
-            location="query",
-            schema=coreschema.ExclusiveUnion(['json', 'xml'], description='Response format')
-        )
-    ]
-    schema = ManualSchema(
-        fields=endpoint_parameter_fields + pagination_parameters + format_parameters,
-        description=f'{endpoint.name} endpoint',
-        encoding='UTF-8'
-    )
-    return EndpointView.as_view(endpoint=endpoint, schema=schema)
-
-
 def generate_endpoints():
     endpoints = Endpoint.objects.all().prefetch_related(
-        'parameters', 'endpoint_selects', 'query', 'schema', 'endpoint_selects__select_from'
+        'parameters', 'endpoint_selects', 'query', 'schema',
+        'endpoint_selects__select_from', 'schema__entries'
     )
     return {
-        ep.name: _generate_endpoint(ep)
+        ep.name: EndpointView.as_view(endpoint=ep)
         for ep in endpoints
     }
 
@@ -263,7 +223,6 @@ class ManageLoadView(View):
 
             schema = SchemaDescription.objects.create(endpoint_id=endpoint_id)
 
-            # todo: store field descriptions
             entries += [
                 SchemaEntry(
                     schema_name=schema,

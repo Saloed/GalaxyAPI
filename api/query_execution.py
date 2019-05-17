@@ -1,9 +1,8 @@
 import os
 import re
-import sqlparse
-
 from typing import Union, List, Dict, Any
 
+import sqlparse
 from django.conf import settings
 from django.db import connections
 

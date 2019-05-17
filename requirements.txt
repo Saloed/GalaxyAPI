@@ -8,6 +8,6 @@ jsonfield==2.0.2
 requests==2.21.0
 djangorestframework==3.9.4
 djangorestframework-xml==1.4.0
-django-rest-swagger==2.2.0
+drf-yasg==1.15.0
 coreapi==2.3.3
 coreschema==0.0.4

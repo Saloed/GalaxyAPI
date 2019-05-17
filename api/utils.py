@@ -1,3 +1,5 @@
+import time
+
 from urllib import parse
 
 from django.utils.encoding import force_str
@@ -44,3 +46,14 @@ class HttpHeaders:
         elif header not in cls.UNPREFIXED_HEADERS:
             return None
         return header.replace('_', '-').title()
+
+
+def timeit(func):
+    def call(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(func.__name__, end - start, *args, *kwargs.items())
+        return result
+
+    return call

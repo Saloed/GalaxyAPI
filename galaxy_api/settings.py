@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Quick-start development settings - unsuitable for production
@@ -35,7 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework_swagger',
+    'drf_yasg',
     'api'
 ]
 
@@ -82,13 +83,13 @@ QUERIES_DIR = os.path.join(BASE_DIR, 'queries')
 # Pagination settings
 
 PAGE_QUERY_PARAM = 'page'
-PAGE_SIZE = 20
+PAGE_SIZE_QUERY_PARAM = 'pagesize'
+DEFAULT_PAGE_SIZE = 20
+
+from galaxy_api.local_settings import *
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-
-
-from galaxy_api.local_settings import *
 
 DATABASES = {
     'default': {

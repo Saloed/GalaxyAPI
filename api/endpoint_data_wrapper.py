@@ -1,6 +1,5 @@
 import requests
 
-from api import description_parser
 from api.models import EndpointSelect
 from api.utils import replace_query_path, HttpHeaders, replace_query_params
 
@@ -22,11 +21,12 @@ class _EndpointDataWrapper:
         url = request.build_absolute_uri()
         key_set = set([self._selection_key(row) for row in data])
 
-        endpoint_path = f'/api/{self.endpoint.select_from.name}'
+        endpoint_path = f'/{self.endpoint.select_from.name}'
         endpoint_url = replace_query_path(url, endpoint_path)
         endpoint_url = replace_query_params(endpoint_url, {'format': 'json'})
 
         headers = HttpHeaders(request.META).headers
+        headers['Accept'] = 'application/json'
 
         for key in key_set:
             value = self._get_all_pages_data(replace_query_params(endpoint_url, dict(key)), headers)

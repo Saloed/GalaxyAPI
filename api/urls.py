@@ -1,5 +1,7 @@
 from django.urls import path
-from rest_framework_swagger.views import get_swagger_view
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
 
 from api import views
 
@@ -8,11 +10,20 @@ api_endpoints = [
     for name, view in views.generate_endpoints().items()
 ]
 
-schema_view = get_swagger_view('Api swagger schema', url='/api', patterns=api_endpoints)
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Galaxy API",
+        default_version='v1',
+        license=openapi.License(name="GNU General Public License v3.0"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+    patterns=api_endpoints
+)
 
 urlpatterns = [
     path('manage/load-descriptions/', views.ManageLoadView.as_view()),
-    path('', schema_view)
+    path('', schema_view.with_ui('swagger'))
 ]
 
 urlpatterns += api_endpoints
