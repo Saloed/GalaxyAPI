@@ -95,29 +95,30 @@ class EndpointView(APIView):
 
     def convert_data(self, data: List[Dict[str, Any]], selected_data: EndpointSelectWrapper):
 
-        schema: [SchemaEntry] = list(self.endpoint.schema.entries.all())
+        scheme = list(self.endpoint.schema.entries.all())
 
-        def build_data_by_schema(row, i, lvl, scheme):
+        def build_data_by_schema(row, i, lvl):
             res = {}
             while i < len(scheme) and scheme[i].level == lvl:
-                name = scheme[i].name
-                if scheme[i].type == 'dict':
-                    res[name], i = build_data_by_schema(row, i + 1, scheme[i].level + 1, scheme)
+                node_scheme = scheme[i]
+                name = node_scheme.name
+                if node_scheme.entry_type == SchemaEntry.NESTED:
+                    res[name], i = build_data_by_schema(row, i + 1, node_scheme.level + 1)
                     continue
-                elif scheme[i].type == 'Select':
-                    endpoint_name = schema[i].value
-                    field_name = schema[i].name
+                elif node_scheme.entry_type == SchemaEntry.SELECT:
+                    endpoint_name = node_scheme.value
+                    field_name = node_scheme.name
                     res[field_name] = selected_data.get_data(endpoint_name, row)
-                elif schema[i].type == 'Db':
-                    value = schema[i].value
+                elif node_scheme.entry_type == SchemaEntry.DB:
+                    value = node_scheme.value
                     res[name] = row[value]
-                else:
+                elif node_scheme.entry_type == SchemaEntry.NORMAL:
                     res[name] = row[name]
                 i += 1
             return res, i
 
         result = [
-            build_data_by_schema(row, 0, 0, schema)[0]
+            build_data_by_schema(row, 0, 0)[0]
             for row in data
         ]
 
@@ -225,8 +226,9 @@ class ManageLoadView(View):
 
             entries += [
                 SchemaEntry(
-                    schema_name=schema,
-                    name=entry.name,
+                    schema=schema,
+                    entry_type=entry.entry_type,
+                    name=entry.field_name,
                     value=entry.value,
                     type=entry.type,
                     level=entry.level

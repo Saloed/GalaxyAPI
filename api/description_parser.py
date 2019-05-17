@@ -1,3 +1,6 @@
+from api.models import SchemaEntry
+
+
 class ParamDescription:
     def __init__(self, name: str, condition: str, required: bool = False):
         self.name = name
@@ -38,17 +41,6 @@ class Select:
         self.field_name = None
 
 
-class FieldEntryDescription:
-    def __init__(self, name, value, type, level):
-        self.name = name
-        """value field: in case of Select type used to store endpoint_name, 
-        in case DB used to store db_name
-        otherwise same as name"""
-        self.value = value
-        self.type = type
-        self.level = level
-
-
 class Db:
     def __init__(self, name, type):
         self.name = name
@@ -61,6 +53,24 @@ DESCRIPTION_CALLS = [
     Db,
     Select
 ]
+
+
+class FieldEntryDescription:
+    def __init__(self, entry_type, name, value, type, level):
+        """
+        :param entry_type: type of entry: one of Nested, Db, Select, Normal
+        :param name: field name
+        :param value: in case of Select type used to store endpoint_name,
+                      in case DB used to store db_name
+                      otherwise None
+        :param type:  field type. In case of Select and Nested is None
+        :param level: field level
+        """
+        self.entry_type = entry_type
+        self.field_name = name
+        self.value = value
+        self.type = type
+        self.level = level
 
 
 class DescriptionParser:
@@ -91,16 +101,20 @@ class DescriptionParser:
         def parse_field_to_entry(root, entries, selects, cur_level):
             for key, value in root.items():
                 if isinstance(value, Db):
-                    entries.append(FieldEntryDescription(key, value.name, 'Db', cur_level))
+                    entry = FieldEntryDescription(SchemaEntry.DB, key, value.name, value.type.__name__, cur_level)
+                    entries.append(entry)
                 elif isinstance(value, Select):
                     value.field_name = key
-                    entries.append(FieldEntryDescription(key, value.endpoint_name, 'Select', cur_level))
+                    entry = FieldEntryDescription(SchemaEntry.SELECT, key, value.endpoint_name, None, cur_level)
+                    entries.append(entry)
                     selects.append(value)
                 elif isinstance(value, dict):
-                    entries.append(FieldEntryDescription(key, key, 'dict', cur_level))
+                    entry = FieldEntryDescription(SchemaEntry.NESTED, key, None, None, cur_level)
+                    entries.append(entry)
                     parse_field_to_entry(value, entries, selects, cur_level + 1)
                 else:
-                    entries.append(FieldEntryDescription(key, key, str(type(value)), cur_level))
+                    entry = FieldEntryDescription(SchemaEntry.NORMAL, key, None, value.__name__, cur_level)
+                    entries.append(entry)
             return entries, selects
 
         if self.fields:

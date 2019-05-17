@@ -41,9 +41,22 @@ class SchemaDescription(models.Model):
 
 
 class SchemaEntry(models.Model):
-    schema_name = models.ForeignKey(SchemaDescription, on_delete=models.CASCADE,
-                                 related_name='entries', related_query_name='entry')
+    NESTED = 'Nested'
+    DB = 'Db'
+    SELECT = 'Select'
+    NORMAL = 'Normal'
+
+    ENTRY_TYPES = [
+        (NORMAL, NORMAL),
+        (SELECT, SELECT),
+        (DB, DB),
+        (NESTED, NESTED),
+    ]
+
+    schema = models.ForeignKey(SchemaDescription, on_delete=models.CASCADE,
+                               related_name='entries', related_query_name='entry')
+    entry_type = models.CharField(choices=ENTRY_TYPES, max_length=255)
     name = models.CharField(max_length=255)
-    value = models.CharField(max_length=255)
-    type = models.CharField(max_length=255)  # TODO: noot the best way fix that
-    level = models.PositiveSmallIntegerField(null=True)
+    value = models.CharField(max_length=255, null=True)
+    type = models.CharField(max_length=255, null=True)
+    level = models.PositiveSmallIntegerField()

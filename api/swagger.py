@@ -80,20 +80,20 @@ class ApiSwaggerAutoSchema(SwaggerAutoSchema):
         return openapi.Response('Normal', schema=schema)
 
     def endpoint_schema(self, endpoint):
-        schema = list(endpoint.schema.entries.all())
+        scheme = list(endpoint.schema.entries.all())
 
-        def build_data_by_schema(i, lvl, scheme):
+        def build_data_by_schema(i, lvl):
             res = {}
             while i < len(scheme) and scheme[i].level == lvl:
-                level_scheme: SchemaEntry = scheme[i]
-                name = level_scheme.name
-                if level_scheme.type == 'dict':
-                    nested_result, i = build_data_by_schema(i + 1, level_scheme.level + 1, scheme)
+                node_scheme: SchemaEntry = scheme[i]
+                name = node_scheme.name
+                if node_scheme.entry_type == SchemaEntry.NESTED:
+                    nested_result, i = build_data_by_schema(i + 1, node_scheme.level + 1)
                     res[name] = openapi.Schema(type=openapi.TYPE_OBJECT, properties=nested_result)
                     continue
-                elif level_scheme.type == 'Select':
-                    endpoint_name = level_scheme.value
-                    field_name = level_scheme.name
+                elif node_scheme.entry_type == SchemaEntry.SELECT:
+                    endpoint_name = node_scheme.value
+                    field_name = node_scheme.name
                     nested_endpoint = endpoint.endpoint_selects.get(select_from__name=endpoint_name).select_from
                     nested_endpoint_scheme = self.endpoint_schema(nested_endpoint)
                     res[field_name] = openapi.Schema(
@@ -104,12 +104,12 @@ class ApiSwaggerAutoSchema(SwaggerAutoSchema):
                     _type = {
                         'str': openapi.TYPE_STRING,
                         'int': openapi.TYPE_INTEGER
-                    }.get(level_scheme.type, level_scheme.type)
+                    }.get(node_scheme.type, node_scheme.type)
                     res[name] = openapi.Schema(type=_type)
 
                 i += 1
             return res, i
 
-        result, _ = build_data_by_schema(0, 0, schema)
+        result, _ = build_data_by_schema(0, 0)
 
         return openapi.Schema(title=endpoint.name, type=openapi.TYPE_OBJECT, properties=result)
