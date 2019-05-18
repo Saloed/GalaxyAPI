@@ -48,6 +48,14 @@ class HttpHeaders:
         return header.replace('_', '-').title()
 
 
+def http_headers(request):
+    if hasattr(request, '_http_headers'):
+        return request._http_headers.headers
+    header_parser = HttpHeaders(request.META)
+    request._http_headers = header_parser
+    return header_parser.headers
+
+
 def timeit(func):
     def call(*args, **kwargs):
         start = time.time()

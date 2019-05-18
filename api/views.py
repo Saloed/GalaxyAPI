@@ -1,27 +1,38 @@
-import builtins
-import inspect
-import os
 from typing import List, Dict, Any
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
-from django.http import HttpResponse
-from django.views import View
+from rest_framework import permissions
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api import description_parser
 from api import query_execution
 from api.endpoint_data_wrapper import EndpointSelectWrapper
 from api.models import *
 from api.renderers import ApiXmlRenderer
 from api.swagger import ApiSwaggerAutoSchema
-from api.utils import replace_query_param
+from api.utils import replace_query_param, http_headers
+
+
+class ApiKeyPermission(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        api_key = settings.API_KEY
+        if api_key is None:
+            return False
+        headers = http_headers(request)
+        request_key = headers.get(settings.API_KEY_HEADER_NAME, None)
+        if request_key is None:
+            return False
+        if request_key != api_key:
+            return False
+        return True
 
 
 class EndpointView(APIView):
     renderer_classes = [JSONRenderer, ApiXmlRenderer]
+    permission_classes = (ApiKeyPermission,)
 
     endpoint: Endpoint = None
     swagger_schema = ApiSwaggerAutoSchema
@@ -134,116 +145,3 @@ def generate_endpoints():
         ep.name: EndpointView.as_view(endpoint=ep)
         for ep in endpoints
     }
-
-
-class ManageLoadView(View):
-    http_method_names = ['get']
-
-    def drop_everything(self):
-        Query.objects.all().delete()
-
-    def load_descriptions(self):
-        files = (
-            os.path.join(settings.QUERIES_DIR, file)
-            for file in os.listdir(settings.QUERIES_DIR)
-        )
-        files = [file for file in files if os.path.isfile(file)]
-        description_lines = []
-        for file in files:
-            with open(file) as f:
-                description_lines += f.readlines()
-
-        description_text = ''.join(description_lines)
-        context = {call.__name__: call for call in description_parser.DESCRIPTION_CALLS}
-        context['__builtins__'] = builtins
-        definitions = dict()
-        exec(description_text, context, definitions)
-        descriptions = [
-            definition
-            for definition in definitions.values()
-            if inspect.isclass(definition)
-        ]
-        return descriptions
-
-    def parse_descriptions(self, descriptions):
-        description_parsers = [
-            description_parser.DescriptionParser(description)
-            for description in descriptions
-        ]
-        for parser in description_parsers:
-            parser.parse()
-        return description_parsers
-
-    def store_to_database(self, descriptions):
-        sql_files = [desc.sql for desc in descriptions]
-        queries = [Query(sql_file_name=sql_file) for sql_file in sql_files]
-        Query.objects.bulk_create(queries)
-        queries = dict(Query.objects.values_list('sql_file_name', 'id'))
-
-        endpoints = [
-            Endpoint(name=desc.name, query_id=queries[desc.sql], pagination_key=desc.pagination_key)
-            for desc in descriptions
-        ]
-        Endpoint.objects.bulk_create(endpoints)
-        endpoint_ids = dict(Endpoint.objects.values_list('name', 'id'))
-
-        entries, selects, params = [], [], []
-        for desc in descriptions:
-            endpoint_id = endpoint_ids[desc.name]
-            selects += [
-                EndpointSelect(
-                    endpoint_id=endpoint_id,
-                    select_from_id=endpoint_ids[select.endpoint_name],
-                    parameters=select.required_params,
-                    select_to_field_name=select.field_name
-                )
-                for select in desc.selects_description
-            ]
-            params += [
-                EndpointParameter(
-                    endpoint_id=endpoint_id,
-                    name=param.name,
-                    condition=param.condition,
-                    required=param.required,
-                    sql_required=False,
-                    position=None
-                )
-                for param in desc.params_description
-            ]
-            params += [
-                EndpointParameter(
-                    endpoint_id=endpoint_id,
-                    name=param.name,
-                    condition='',
-                    required=True,
-                    sql_required=True,
-                    position=i
-                )
-                for i, param in enumerate(desc.required_params_description)
-            ]
-
-            schema = SchemaDescription.objects.create(endpoint_id=endpoint_id)
-
-            entries += [
-                SchemaEntry(
-                    schema=schema,
-                    entry_type=entry.entry_type,
-                    name=entry.field_name,
-                    value=entry.value,
-                    type=entry.type,
-                    level=entry.level
-                )
-                for entry in desc.fields_description
-            ]
-
-        EndpointParameter.objects.bulk_create(params)
-        EndpointSelect.objects.bulk_create(selects)
-        SchemaEntry.objects.bulk_create(entries)
-
-    def get(self, request, *args, **kwargs):
-        self.drop_everything()
-        descriptions = self.load_descriptions()
-        descriptions = self.parse_descriptions(descriptions)
-        self.store_to_database(descriptions)
-
-        return HttpResponse('OK')

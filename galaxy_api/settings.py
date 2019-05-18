@@ -76,6 +76,24 @@ TEMPLATES = [
     },
 ]
 
+API_PATH_PREFIX = 'api'
+
+API_KEY_HEADER_NAME = 'X-Api-Key'
+
+API_KEY = None  # configure
+
+SWAGGER_SETTINGS = {
+    'DEFAULT_INFO': 'api.urls.api_info',
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            "type": "apiKey",
+            "name": API_KEY_HEADER_NAME,
+            "in": "header"
+        }
+    }
+}
+
 # Queries directory settings
 
 QUERIES_DIR = os.path.join(BASE_DIR, 'queries')
