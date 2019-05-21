@@ -147,6 +147,9 @@ DATABASES = {
     }
 }
 
+if not os.path.exists(LOG_ROOT):
+    os.makedirs(LOG_ROOT)
+
 __debug_log_level = DEBUG_TRUE_LOG_LEVEL if DEBUG else DEBUG_FALSE_LOG_LEVEL
 
 LOGGING = {
