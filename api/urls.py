@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.urls import path
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
@@ -7,7 +6,7 @@ from rest_framework import permissions
 from api import views
 
 api_endpoints = [
-    path(f'{settings.API_PATH_PREFIX}/{name}', view)
+    path(name, view)
     for name, view in views.generate_endpoints().items()
 ]
 

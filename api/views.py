@@ -137,10 +137,13 @@ class EndpointView(APIView):
 
 
 def generate_endpoints():
-    endpoints = Endpoint.objects.all().prefetch_related(
-        'parameters', 'endpoint_selects', 'query', 'schema',
-        'endpoint_selects__select_from', 'schema__entries'
-    )
+    try:
+        endpoints = Endpoint.objects.all().prefetch_related(
+            'parameters', 'endpoint_selects', 'query', 'schema',
+            'endpoint_selects__select_from', 'schema__entries'
+        )
+    except Exception as ex:
+        endpoints = []
     return {
         ep.name: EndpointView.as_view(endpoint=ep)
         for ep in endpoints

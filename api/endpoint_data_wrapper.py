@@ -1,7 +1,5 @@
 import requests
 
-from django.conf import settings
-
 from api.models import EndpointSelect
 from api.utils import replace_query_path, http_headers, replace_query_params
 
@@ -23,7 +21,7 @@ class _EndpointDataWrapper:
         url = request.build_absolute_uri()
         key_set = set([self._selection_key(row) for row in data])
 
-        endpoint_path = f'{settings.API_PATH_PREFIX}/{self.endpoint.select_from.name}'
+        endpoint_path = self.endpoint.select_from.name
         endpoint_url = replace_query_path(url, endpoint_path)
         endpoint_url = replace_query_params(endpoint_url, {'format': 'json'})
 
