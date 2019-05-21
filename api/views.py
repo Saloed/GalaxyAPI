@@ -142,9 +142,9 @@ def generate_endpoints():
             'parameters', 'endpoint_selects', 'query', 'schema',
             'endpoint_selects__select_from', 'schema__entries'
         )
+        return {
+            ep.name: EndpointView.as_view(endpoint=ep)
+            for ep in endpoints
+        }
     except Exception as ex:
-        endpoints = []
-    return {
-        ep.name: EndpointView.as_view(endpoint=ep)
-        for ep in endpoints
-    }
+        return {}
