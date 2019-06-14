@@ -3,3 +3,5 @@ DB_USER = 'SA'
 DB_PASSWORD = 'pass'
 DB_HOST = '127.0.0.1'
 DB_PORT = '1433'
+
+API_KEY = '12345'

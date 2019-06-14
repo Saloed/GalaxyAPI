@@ -1,0 +1,42 @@
+SELECT CASE WHEN UDIS.f$wlevel=0 THEN T$U_CYCLESDIS.F$NAME WHEN UDIS.f$wlevel=1 THEN T$U_ComponentDis.F$NAME WHEN UDIS.f$wlevel=2 THEN U_DisciplineF.F$NAME END AS Title
+, CONVERT(VARCHAR(512), CONVERT(BIGINT,UDIS.f$nREc)- CONVERT(BIGINT,0x8000000000000000)) AS NREC
+,UDIS.F$SADDFLD#2#  as ID
+,
+CONVERT(VARCHAR(512), CONVERT(BIGINT,UDIS.F$CPARENT)- CONVERT(BIGINT,0x8000000000000000)) AS Parent_ID
+, CONVERT(VARCHAR(512), CONVERT(BIGINT,U_DisciplineF.f$nREc)- CONVERT(BIGINT,0x8000000000000000)) AS subject_ID
+,UDIS.F$HOURCURPLAN AS Hours
+, CASE WHEN UDIS.f$wlevel=0 THEN 0 WHEN UDIS.f$wlevel=1 THEN IIF(T$U_ComponentDis.f$wType = 3,1,0) WHEN UDIS.f$wlevel=2 THEN IIF(U_DISCIPLINEF.f$WPROPERTIES & 4>0,1,0) END AS elective
+, CASE WHEN
+ UDIS.f$wlevel=2 THEN CASE WHEN U_PropFirstLevel.F$BTPRACTIC=2 THEN 'pactice' WHEN U_PropFirstLevel.F$BTGRADUATWORK=2 THEN 'vkr' WHEN U_PropFirstLevel.F$BTSTATEEXAM=2 THEN 'gos' WHEN U_PropFirstLevel.F$btResearchWrk=2 THEN 'nir' ELSE CASE WHEN U_PropDisDef.F$BTPRACTIC=2 THEN 'pactice' WHEN U_PropDisDef.F$BTGRADUATWORK=2 THEN 'vkr' WHEN U_PropDisDef.F$BTSTATEEXAM=2 THEN 'gos' WHEN U_PropDisDef.F$btResearchWrk=2 THEN 'nir' ELSE CASE WHEN U_PropComDef.F$BTPRACTIC=2 THEN 'pactice' WHEN U_PropComDef.F$BTGRADUATWORK=2 THEN 'vkr' WHEN U_PropComDef.F$BTSTATEEXAM=2 THEN 'gos' WHEN U_PropComDef.F$btResearchWrk=2 THEN 'nir' ELSE CASE WHEN U_PropCycDef.F$BTPRACTIC=2 THEN 'pactice' WHEN U_PropCycDef.F$BTGRADUATWORK=2 THEN 'vkr' WHEN U_PropCycDef.F$BTSTATEEXAM=2 THEN 'gos' WHEN U_PropCycDef.F$btResearchWrk=2 THEN 'nir' ELSE CASE WHEN U_PropSecondLevel.F$BTPRACTIC=2 THEN 'pactice' WHEN U_PropSecondLevel.F$BTGRADUATWORK=2 THEN 'vkr' WHEN U_PropSecondLevel.F$BTSTATEEXAM=2 THEN 'gos' WHEN U_PropSecondLevel.F$btResearchWrk=2 THEN 'nir' ELSE CASE WHEN U_PropThirdLevel.F$BTPRACTIC=2 THEN 'pactice' WHEN U_PropThirdLevel.F$BTGRADUATWORK=2 THEN 'vkr' WHEN U_PropThirdLevel.F$BTSTATEEXAM=2 THEN 'gos' WHEN U_PropThirdLevel.F$btResearchWrk=2 THEN 'nir' ELSE
+					'subject' END END END END END END ELSE
+ 'section' END AS 'type'
+,UDIS.f$wlevel AS section_type
+,UDIS.f$DCREDITCURPLAN AS zet
+,UDIS.f$HOURLECROOM AS class_load
+FROM T$U_CURR_DIS UDIS
+LEFT OUTER
+JOIN t$U_Curr_Dis UDISSUB ON UDISSUB.F$CCURR = UDIS.F$CCURR AND UDISSUB.F$NREC = UDISSUB.F$CPARENT
+LEFT OUTER
+JOIN T$U_DISCIPLINE U_DisciplineF ON U_DisciplineF.F$NREC = UDIS.F$CDIS
+LEFT OUTER
+JOIN T$U_CYCLESDIS ON T$U_CYCLESDIS.F$NREC = UDIS.f$cCycle
+LEFT OUTER
+JOIN T$U_ComponentDis ON T$U_ComponentDis.F$NREC = UDIS.F$CCOMPONENT
+LEFT OUTER
+JOIN t$U_CycComDisProp U_PropFirstLevel ON U_PropFirstLevel.f$wTable = 26019 AND UDIS.f$Nrec = U_PropFirstLevel.f$cRec
+LEFT OUTER
+JOIN t$U_CycComDisProp U_PropDisDef ON U_PropDisDef.f$wTable = 26006 AND UDIS.f$cDis = U_PropDisDef.f$cRec
+LEFT OUTER
+JOIN t$U_CycComDisProp U_PropComDef ON U_PropComDef.f$wTable = 26005 AND UDIS.f$cComponent = U_PropComDef.f$cRec
+LEFT OUTER
+JOIN t$U_CycComDisProp U_PropCycDef ON U_PropCycDef.f$wTable = 26004 AND UDIS.f$cCycle = U_PropCycDef.f$cRec
+LEFT OUTER
+JOIN T$U_CURR_DIS U_Curr_DisPar ON UDIS.F$CPARENT = U_Curr_DisPar.F$NREC
+LEFT OUTER
+JOIN t$U_CycComDisProp U_PropSecondLevel ON U_PropSecondLevel.f$wTable = 26019 AND U_Curr_DisPar.f$Nrec = U_PropFirstLevel.f$cRec
+LEFT OUTER
+JOIN T$U_CURR_DIS U_Curr_DisParPar ON U_Curr_DisPar.F$CPARENT = U_Curr_DisParPar.F$NREC
+LEFT OUTER
+JOIN t$U_CycComDisProp U_PropThirdLevel ON U_PropThirdLevel.f$wTable = 26019 AND U_Curr_DisParPar.f$Nrec = U_PropThirdLevel.f$cRec
+WHERE
+UDIS.F$CCURR = CONVERT(BINARY(8), CONVERT(BIGINT,0x8000000000000000)+ CONVERT(BIGINT,%s))
