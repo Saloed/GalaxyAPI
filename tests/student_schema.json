@@ -1,0 +1,424 @@
+{
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "has_next",
+    "has_prev",
+    "prev",
+    "next",
+    "data"
+  ],
+  "properties": {
+    "has_next": {"type": "boolean"},
+    "has_prev": {"type": "boolean"},
+    "prev": {"type": ["string", "null"]},
+    "next": {"type": ["string", "null"]},
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "NREC",
+          "PERSNREC",
+          "UID",
+          "FullName",
+          "Status",
+          "Baza",
+          "Department",
+          "EduDirection",
+          "EduProfile",
+          "EduQual",
+          "EduLevel",
+          "StudyForm",
+          "Year",
+          "AppDate",
+          "AdmissionYear",
+          "Group",
+          "SubGroup",
+          "DisDate",
+          "ADMISSIONBUPNREC",
+          "ADMISSIONRUPNREC",
+          "BUPNREC",
+          "RUPNREC",
+          "RUPS",
+          "Borndate",
+          "Sex",
+          "Localiz",
+          "Gr",
+          "FIN",
+          "IsFromOtherVuz",
+          "IsCP",
+          "Person",
+          "Modified"
+        ],
+        "properties": {
+          "NREC": {"type": "string"},
+          "PERSNREC": {"type": "string"},
+          "UID": {"type": "string"},
+          "FullName": {"type": "string"},
+          "Status": {
+            "type": "object",
+            "required": [
+              "ID",
+              "IDS",
+              "Status"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "IDS": {"type": "string"},
+              "Status": {"type": "string"}
+            }
+          },
+          "Baza": {"type": "integer"},
+          "Department": {
+            "type": "object",
+            "required": [
+              "ID",
+              "IDS",
+              "SHORT",
+              "Department"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "IDS": {"type": "string"},
+              "SHORT": {"type": "string"},
+              "Department": {"type": "string"}
+            }
+          },
+          "EduDirection": {
+            "type": "object",
+            "required": [
+              "ID",
+              "CODE",
+              "EduDirection"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "CODE": {"type": "string"},
+              "EduDirection": {"type": "string"}
+            }
+          },
+          "EduProfile": {
+            "type": "object",
+            "required": [
+              "ID",
+              "EduProfile"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "EduProfile": {"type": "string"}
+            }
+          },
+          "EduQual": {
+            "type": "object",
+            "required": [
+              "ID",
+              "EduQual"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "EduQual": {"type": "string"}
+            }
+          },
+          "EduLevel": {
+            "type": "object",
+            "required": [
+              "ID",
+              "EduLevel"
+            ],
+            "properties": {
+              "ID": {"type": "integer"},
+              "EduLevel": {"type": "string"}
+            }
+          },
+          "StudyForm": {
+            "type": "object",
+            "required": [
+              "ID",
+              "StudyForm"
+            ],
+            "properties": {
+              "ID": {"type": "integer"},
+              "StudyForm": {"type": "string"}
+            }
+          },
+          "Year": {"type": "integer"},
+          "AppDate": {"type": "string"},
+          "AdmissionYear": {"type": "string"},
+          "Group": {
+            "type": "object",
+            "required": [
+              "ID",
+              "Group"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "Group": {"type": "string"}
+            }
+          },
+          "SubGroup": {
+            "type": "object",
+            "required": [
+              "ID",
+              "SubGroup"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "SubGroup": {"type": "string"}
+            }
+          },
+          "DisDate": {"type": "string"},
+          "ADMISSIONBUPNREC": {"type": "string"},
+          "ADMISSIONRUPNREC": {"type": "string"},
+          "BUPNREC": {"type": "string"},
+          "RUPNREC": {"type": "string"},
+          "RUPS": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "NREC",
+                "Year"
+              ],
+              "properties": {
+                "NREC": {"type": "string"},
+                "Year": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "Borndate": {"type": "string"},
+          "Sex": {"type": "string"},
+          "Localiz": {"type": "string"},
+          "Gr": {
+            "type": "object",
+            "required": [
+              "ID",
+              "Gr"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "Gr": {"type": "string"}
+            }
+          },
+          "FIN": {
+            "type": "object",
+            "required": [
+              "ID",
+              "FIN"
+            ],
+            "properties": {
+              "ID": {"type": "string"},
+              "FIN": {"type": "string"}
+            }
+          },
+          "IsFromOtherVuz": {"type": "string"},
+          "IsCP": {"type": "string"},
+          "Person": {
+            "type": "object",
+            "required": [
+              "LastName",
+              "FirstName",
+              "PatrName",
+              "IdentityDoc",
+              "DocSerie",
+              "DocNumber",
+              "DocDate",
+              "DocOrg",
+              "BirthPlace",
+              "Phone",
+              "Email",
+              "Photo",
+              "IsPersonalDataAgreement",
+              "Addresses"
+            ],
+            "properties": {
+              "LastName": {"type": "string"},
+              "FirstName": {"type": "string"},
+              "PatrName": {"type": "string"},
+              "IdentityDoc": {
+                "type": "object",
+                "required": [
+                  "ID",
+                  "IdentityDoc"
+                ],
+                "properties": {
+                  "ID": {"type": "string"},
+                  "IdentityDoc": {"type": "string"}
+                }
+              },
+              "DocSerie": {"type": "string"},
+              "DocNumber": {"type": "string"},
+              "DocDate": {
+                "type": "integer"
+              },
+              "DocOrg": {"type": "string"},
+              "BirthPlace": {
+                "type": ["string", "null"]
+              },
+              "Phone": {
+                "type": ["string", "null"]
+              },
+              "Email": {
+                "type": ["string", "null"]
+              },
+              "Photo": {
+                "type": ["string", "null"]
+              },
+              "IsPersonalDataAgreement": {"type": "string"},
+              "Addresses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "AddressType",
+                    "country",
+                    "index",
+                    "region",
+                    "district",
+                    "city",
+                    "locality",
+                    "street",
+                    "homenumber",
+                    "corpnumber",
+                    "flatnumber",
+                    "kladrstreet"
+                  ],
+                  "properties": {
+                    "AddressType": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "AddressType"
+                      ],
+                      "properties": {
+                        "ID": {
+                          "type": "integer"
+                        },
+                        "AddressType": {"type": "string"}
+                      }
+                    },
+                    "country": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "country"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "country": {"type": "string"}
+                      }
+                    },
+                    "index": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "index"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "index": {"type": "string"}
+                      }
+                    },
+                    "region": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "region"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "region": {"type": "string"}
+                      }
+                    },
+                    "district": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "district"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "district": {"type": "string"}
+                      }
+                    },
+                    "city": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "city"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "city": {"type": "string"}
+                      }
+                    },
+                    "locality": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "locality"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "locality": {"type": "string"}
+                      }
+                    },
+                    "street": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "street"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "street": {"type": "string"}
+                      }
+                    },
+                    "homenumber": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "homenumber"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "homenumber": {"type": "string"}
+                      }
+                    },
+                    "corpnumber": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "corpnumber"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "corpnumber": {"type": "string"}
+                      }
+                    },
+                    "flatnumber": {
+                      "type": "object",
+                      "required": [
+                        "ID",
+                        "flatnumber"
+                      ],
+                      "properties": {
+                        "ID": {"type": "string"},
+                        "flatnumber": {"type": "string"}
+                      }
+                    },
+                    "kladrstreet": {"type": "string"}
+                  }
+                }
+              }
+            }
+          },
+          "Modified": {"type": "string"}
+        }
+      }
+    }
+  }
+}

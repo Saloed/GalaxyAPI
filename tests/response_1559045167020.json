@@ -1,0 +1,150 @@
+{
+  "has_next": true,
+  "has_prev": false,
+  "prev": null,
+  "next": "http://127.0.0.1:8000/Student?page=1&pagesize=1",
+  "data": [
+    {
+      "NREC": "1000",
+      "PERSNREC": "1000",
+      "UID": "13290089",
+      "FullName": "Збирко Дмитрий Николаевич",
+      "Status": {
+        "ID": "28147497671065616",
+        "IDS": "011",
+        "Status": "Окончил ВУЗ"
+      },
+      "Baza": 1,
+      "Department": {
+        "ID": "6523",
+        "IDS": "29",
+        "SHORT": "УПК",
+        "Department": "Университетский политехнический колледж"
+      },
+      "EduDirection": {
+        "ID": "6745",
+        "CODE": "230113",
+        "EduDirection": "Компьютерные системы и комплексы"
+      },
+      "EduProfile": {
+        "ID": "2",
+        "EduProfile": "Компьютерные системы и комплексы"
+      },
+      "EduQual": {
+        "ID": "7047",
+        "EduQual": "техник по компьютерным системам"
+      },
+      "EduLevel": {
+        "ID": 3,
+        "EduLevel": "Базовый уровень"
+      },
+      "StudyForm": {
+        "ID": 0,
+        "StudyForm": " "
+      },
+      "Year": 4,
+      "AppDate": "07.08.2013",
+      "AdmissionYear": " ",
+      "Group": {
+        "ID": "148",
+        "Group": " "
+      },
+      "SubGroup": {
+        "ID": "",
+        "SubGroup": " "
+      },
+      "DisDate": "01.07.2017",
+      "ADMISSIONBUPNREC": "94",
+      "ADMISSIONRUPNREC": "",
+      "BUPNREC": "94",
+      "RUPNREC": "0",
+      "RUPS": [
+        {
+          "NREC": "28147497671065671",
+          "Year": 2014
+        }
+      ],
+      "Borndate": "08.11.1996",
+      "Sex": "М",
+      "Localiz": "Гражданин России",
+      "Gr": {
+        "ID": "10",
+        "Gr": "Российская федерация"
+      },
+      "FIN": {
+        "ID": "646",
+        "FIN": "Бюджет"
+      },
+      "IsFromOtherVuz": "False",
+      "IsCP": "False",
+      "Person": {
+        "LastName": "Збирко",
+        "FirstName": "Дмитрий",
+        "PatrName": " Николаевич",
+        "IdentityDoc": {
+          "ID": "28147497671066597",
+          "IdentityDoc": "Паспорт гражданина РФ"
+        },
+        "DocSerie": "4010",
+        "DocNumber": "176469",
+        "DocDate": 131730206,
+        "DocOrg": "ТП №13 отдела УФМС России по СПб и ЛО в Выборгском р-не СПб",
+        "BirthPlace": null,
+        "Phone": null,
+        "Email": null,
+        "Photo": "False",
+        "IsPersonalDataAgreement": "true",
+        "Addresses": [
+          {
+            "AddressType": {
+              "ID": 1,
+              "AddressType": "Адрес по прописке"
+            },
+            "country": {
+              "ID": "",
+              "country": "Россия"
+            },
+            "index": {
+              "ID": "",
+              "index": "194295"
+            },
+            "region": {
+              "ID": "",
+              "region": ""
+            },
+            "district": {
+              "ID": "",
+              "district": ""
+            },
+            "city": {
+              "ID": "",
+              "city": ""
+            },
+            "locality": {
+              "ID": "",
+              "locality": ""
+            },
+            "street": {
+              "ID": "",
+              "street": "ул. Ивана Фомина, д.5, корп.2, кв.180"
+            },
+            "homenumber": {
+              "ID": "",
+              "homenumber": " "
+            },
+            "corpnumber": {
+              "ID": "",
+              "corpnumber": " "
+            },
+            "flatnumber": {
+              "ID": "",
+              "flatnumber": " "
+            },
+            "kladrstreet": "7800000000000"
+          }
+        ]
+      },
+      "Modified": "14.07.2017 15:00:15"
+    }
+  ]
+}
