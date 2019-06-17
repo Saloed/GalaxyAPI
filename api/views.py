@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
+from django.db import DatabaseError
 from rest_framework import permissions
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
@@ -13,6 +14,7 @@ from api.models import *
 from api.renderers import ApiXmlRenderer
 from api.swagger import ApiSwaggerAutoSchema
 from api.utils import replace_query_param, http_headers
+from re import sub
 
 
 class ApiKeyPermission(permissions.BasePermission):
@@ -66,9 +68,16 @@ class EndpointView(APIView):
             page_number = int(request_params.get(settings.PAGE_QUERY_PARAM, 0))
             page_size = int(request_params.get(settings.PAGE_SIZE_QUERY_PARAM, settings.DEFAULT_PAGE_SIZE))
             page = query_execution.Page(self.endpoint.pagination_key, page_size, page_number)
-
-        query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
-
+        try:
+            query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
+        except DatabaseError as exc:
+            return Response(self.handle_db_exception(exc))
+        except Exception as exc:
+            return Response(
+                {
+                    "type": type(exc).__name__,
+                    "message": str(exc)
+                })
         selected_data = EndpointSelectWrapper(self.endpoint.endpoint_selects.all())
         selected_data.load(query_result, request)
 
@@ -133,6 +142,17 @@ class EndpointView(APIView):
             for row in data
         ]
 
+        return result
+
+    def handle_db_exception(self, exc):
+        result = {'type': type(exc).__name__}
+        if exc.args:
+            message = sub("[\\[\\]]", "",
+                          exc.args[1]).split("\n")[0] if len(exc.args) > 1 else str(exc)
+            result['errorCode'] = exc.args[0]
+            result['message'] = message
+        else:
+            result['message'] = str(exc)
         return result
 
 
