@@ -4,7 +4,7 @@ from django.utils.encoding import force_text
 
 from six import StringIO
 
-from api.models import Endpoint
+from api.endpoint import Endpoint
 
 
 class _XMLNamedNode:

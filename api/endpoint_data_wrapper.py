@@ -1,13 +1,17 @@
+from typing import List
+
 import requests
 
-from api.models import EndpointSelect
+from api.endpoint import Select
+from api.endpoint_loader import EndpointStorage
 from api.utils import replace_query_path, http_headers, replace_query_params
 
 
 class _EndpointDataWrapper:
-    def __init__(self, endpoint: EndpointSelect):
-        self.endpoint = endpoint
-        self._parameters = sorted(self.endpoint.parameters.items())
+    def __init__(self, select_from_endpoint: Select):
+        self.select_from_endpoint = select_from_endpoint
+        self._endpoint = EndpointStorage.endpoints[select_from_endpoint.endpoint]
+        self._parameters = sorted(self.select_from_endpoint.params.items())
         self.endpoint_data = {}
 
     def _selection_key(self, data):
@@ -21,7 +25,7 @@ class _EndpointDataWrapper:
         url = request.build_absolute_uri()
         key_set = set([self._selection_key(row) for row in data])
 
-        endpoint_path = self.endpoint.select_from.name
+        endpoint_path = self.select_from_endpoint.endpoint
         endpoint_url = replace_query_path(url, endpoint_path)
         endpoint_url = replace_query_params(endpoint_url, {'format': 'json'})
 
@@ -41,21 +45,30 @@ class _EndpointDataWrapper:
     def _get_all_pages_data(self, url, headers):
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        result = []
+
+        data = []
         while True:
             response_data = response.json()
-            result += response_data['data']
+            if not self._endpoint.pagination_enabled:
+                data.append(response_data)
+                break
+            data.append(response_data['data'])
             if not response_data['has_next']: break
             response = requests.get(response_data['next'], headers)
             response.raise_for_status()
+
+        if self._endpoint.
+
+        result = []
+
 
         return result
 
 
 class EndpointSelectWrapper:
-    def __init__(self, endpoints):
+    def __init__(self, endpoints: List[Select]):
         self.endpoints_data_wrappers = {
-            endpoint_select.select_from.name: _EndpointDataWrapper(endpoint_select)
+            endpoint_select.endpoint: _EndpointDataWrapper(endpoint_select)
             for endpoint_select in endpoints
         }
 

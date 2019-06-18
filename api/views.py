@@ -8,8 +8,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api import query_execution
+from api.endpoint import Endpoint, SchemaFieldType, Field, Select, Object
 from api.endpoint_data_wrapper import EndpointSelectWrapper
-from api.models import *
+from api.endpoint_loader import load_endpoints
 from api.renderers import ApiXmlRenderer
 from api.swagger import ApiSwaggerAutoSchema
 from api.utils import replace_query_param, http_headers
@@ -18,6 +19,7 @@ from api.utils import replace_query_param, http_headers
 class ApiKeyPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
+        return True
         api_key = settings.API_KEY
         if api_key is None:
             return False
@@ -38,12 +40,16 @@ class EndpointView(APIView):
     swagger_schema = ApiSwaggerAutoSchema
 
     def get(self, request, *args, **kwargs):
-        parameters = self.endpoint.parameters.all()
         request_params = request.GET
 
+        required_parameters = self.endpoint.sql_params + [
+            param
+            for param in self.endpoint.params
+            if param.required
+        ]
         unspecified_parameters = [
-            param for param in parameters
-            if param.required and param.name not in request_params
+            param for param in required_parameters
+            if param.name not in request_params
         ]
         if unspecified_parameters:
             parameter_names = ', '.join([param.name for param in unspecified_parameters])
@@ -51,42 +57,43 @@ class EndpointView(APIView):
 
         sql_parameters = [
             query_execution.Param(param.name, param.condition, request_params[param.name])
-            for param in parameters
-            if not param.sql_required and param.name in request_params
+            for param in self.endpoint.params
+            if param.name in request_params
         ]
-        sql_required_parameters = [param for param in parameters if param.sql_required]
+        sql_required_parameters = self.endpoint.sql_params[:]
         sql_required_parameters.sort(key=lambda it: it.position)
         sql_required_parameters = [
             query_execution.RequiredParam(param.name, request_params[param.name])
             for param in sql_required_parameters
         ]
-        query = query_execution.Query(self.endpoint.query.sql_file_name)
+        query = query_execution.Query(self.endpoint.sql)
+
+        if self.endpoint.aggregation_enabled:
+            # todo: aggregation
+            raise NotImplemented
+
+            pass
+
         page = None
-        if self.endpoint.pagination_key is not None:
+        if self.endpoint.pagination_enabled:
             page_number = int(request_params.get(settings.PAGE_QUERY_PARAM, 0))
             page_size = int(request_params.get(settings.PAGE_SIZE_QUERY_PARAM, settings.DEFAULT_PAGE_SIZE))
-            page = query_execution.Page(self.endpoint.pagination_key, page_size, page_number)
+            page = query_execution.Page(self.endpoint.key, page_size, page_number)
 
         query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
 
-        selected_data = EndpointSelectWrapper(self.endpoint.endpoint_selects.all())
+        selected_data = EndpointSelectWrapper(self.endpoint.selects)
         selected_data.load(query_result, request)
 
         data = self.convert_data(query_result, selected_data)
 
-        data_with_pagination = self.paginate(request, data, page)
-
-        return Response(data_with_pagination)
+        if self.endpoint.pagination_enabled:
+            data_with_pagination = self.paginate(request, data, page)
+            return Response(data_with_pagination)
+        else:
+            return Response(data)
 
     def paginate(self, request, data, page):
-        if page is None:
-            return {
-                'has_next': False,
-                'has_prev': False,
-                'prev': None,
-                'next': None,
-                'data': data
-            }
         url = request.build_absolute_uri()
         has_prev = page.number > 0
         has_next = len(data) == page.size
@@ -104,49 +111,34 @@ class EndpointView(APIView):
             'data': data
         }
 
+    def convert_single_record(self, record, field: SchemaFieldType, selected_data: EndpointSelectWrapper):
+        if isinstance(field, Field):
+            return record[field.db_name]
+        elif isinstance(field, Select):
+            return selected_data.get_data(field.endpoint, record)
+        elif isinstance(field, Object):
+            return {
+                key: self.convert_single_record(record, value, selected_data)
+                for key, value in field.fields.items()
+            }
+        else:
+            raise ValueError(f"Unknown schema field type: {field}")
+
     def convert_data(self, data: List[Dict[str, Any]], selected_data: EndpointSelectWrapper):
-
-        scheme = list(self.endpoint.schema.entries.all())
-
-        def build_data_by_schema(row, i, lvl):
-            res = {}
-            while i < len(scheme) and scheme[i].level == lvl:
-                node_scheme = scheme[i]
-                name = node_scheme.name
-                if node_scheme.entry_type == SchemaEntry.NESTED:
-                    res[name], i = build_data_by_schema(row, i + 1, node_scheme.level + 1)
-                    continue
-                elif node_scheme.entry_type == SchemaEntry.SELECT:
-                    endpoint_name = node_scheme.value
-                    field_name = node_scheme.name
-                    res[field_name] = selected_data.get_data(endpoint_name, row)
-                elif node_scheme.entry_type == SchemaEntry.DB:
-                    value = node_scheme.value
-                    res[name] = row[value]
-                elif node_scheme.entry_type == SchemaEntry.NORMAL:
-                    res[name] = row[name]
-                i += 1
-            return res, i
-
-        result = [
-            build_data_by_schema(row, 0, 0)[0]
-            for row in data
-        ]
-
-        return result
+        if self.endpoint.key is not None:
+            return {
+                record[self.endpoint.key]: self.convert_single_record(record, self.endpoint.schema, selected_data)
+                for record in data
+            }
+        else:
+            return [
+                self.convert_single_record(record, self.endpoint.schema, selected_data)
+                for record in data
+            ]
 
 
-def generate_endpoints():
-    try:
-        endpoints = Endpoint.objects.all().prefetch_related(
-            'parameters', 'endpoint_selects', 'query', 'schema',
-            'endpoint_selects__select_from', 'schema__entries'
-        )
-        return {
-            ep.name: EndpointView.as_view(endpoint=ep)
-            for ep in endpoints
-        }
-    except Exception as ex:
-        return {}
-
-
+def generate_endpoint_views():
+    return {
+        name: EndpointView.as_view(endpoint=ep)
+        for name, ep in load_endpoints().items()
+    }

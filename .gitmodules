@@ -1,0 +1,3 @@
+[submodule "galaxy-descriptions"]
+	path = galaxy-descriptions
+	url = https://github.com/Saloed/galaxy-descriptions.git
