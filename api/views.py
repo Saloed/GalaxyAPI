@@ -19,7 +19,6 @@ from api.utils import replace_query_param, http_headers
 class ApiKeyPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        return True
         api_key = settings.API_KEY
         if api_key is None:
             return False
@@ -125,16 +124,10 @@ class EndpointView(APIView):
             raise ValueError(f"Unknown schema field type: {field}")
 
     def convert_data(self, data: List[Dict[str, Any]], selected_data: EndpointSelectWrapper):
-        if self.endpoint.key is not None:
-            return {
-                record[self.endpoint.key]: self.convert_single_record(record, self.endpoint.schema, selected_data)
-                for record in data
-            }
-        else:
-            return [
-                self.convert_single_record(record, self.endpoint.schema, selected_data)
-                for record in data
-            ]
+        return [
+            self.convert_single_record(record, self.endpoint.schema, selected_data)
+            for record in data
+        ]
 
 
 def generate_endpoint_views():

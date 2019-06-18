@@ -53,6 +53,8 @@ class Object:
     name: Optional[str]
     description: str
     fields: Dict[str, SchemaFieldType]
+    many: Optional[bool]
+    aggregation_field: Optional[str]
 
 
 @dataclass

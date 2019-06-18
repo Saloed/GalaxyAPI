@@ -46,21 +46,16 @@ class _EndpointDataWrapper:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
 
-        data = []
+        result = []
         while True:
             response_data = response.json()
             if not self._endpoint.pagination_enabled:
-                data.append(response_data)
+                result = response_data
                 break
-            data.append(response_data['data'])
+            result += response_data['data']
             if not response_data['has_next']: break
             response = requests.get(response_data['next'], headers)
             response.raise_for_status()
-
-        if self._endpoint.
-
-        result = []
-
 
         return result
 
