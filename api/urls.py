@@ -7,7 +7,7 @@ from api import views
 
 api_endpoints = [
     path(name, view)
-    for name, view in views.generate_endpoints().items()
+    for name, view in views.generate_endpoint_views().items()
 ]
 
 api_info = openapi.Info(

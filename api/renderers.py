@@ -4,47 +4,8 @@ from django.utils.encoding import force_text
 
 from six import StringIO
 
-from api.models import Endpoint
-
-
-class _XMLNamedNode:
-    def __init__(self, node, name):
-        self.node = node
-        self.name = name
-
-
-class _EndpointDependency:
-    def __init__(self, filed_name, endpoint, children):
-        self.endpoint = endpoint
-        self.filed_name = filed_name
-        self.children = children
-
-
-def _get_endpoints_recursively(endpoint: Endpoint, name):
-    children = endpoint.endpoint_selects.prefetch_related('select_from').all()
-    children = [
-        _get_endpoints_recursively(select.select_from, select.select_to_field_name)
-        for select in children
-    ]
-    children = {it.filed_name: it for it in children}
-    return _EndpointDependency(name, endpoint, children)
-
-
-def _rebuild_xml_result(root, parent_key, endpoint_dependency):
-    if isinstance(root, dict):
-        return {
-            key: _rebuild_xml_result(value, key, endpoint_dependency)
-            for key, value in root.items()
-        }
-    elif isinstance(root, (list, tuple)):
-        endpoint = endpoint_dependency[parent_key]
-        data = [
-            _rebuild_xml_result(it, None, endpoint.children)
-            for it in root
-        ]
-        return _XMLNamedNode(data, endpoint.endpoint.name)
-    else:
-        return root
+from api.endpoint import Endpoint, SchemaFieldType, Field, Select, Object
+from api.endpoint_loader import EndpointStorage
 
 
 class ApiXmlRenderer(XMLRenderer):
@@ -55,11 +16,7 @@ class ApiXmlRenderer(XMLRenderer):
         if data is None:
             return ''
 
-        endpoint = renderer_context['view'].endpoint
-
-        dependency = _get_endpoints_recursively(endpoint, 'data')
-        dependency = {'data': dependency}
-        data = _rebuild_xml_result(data, None, dependency)
+        endpoint: Endpoint = renderer_context['view'].endpoint
 
         stream = StringIO()
 
@@ -67,30 +24,47 @@ class ApiXmlRenderer(XMLRenderer):
         xml.startDocument()
         xml.startElement(self.root_tag_name, {})
 
-        self._to_xml(xml, data)
+        if endpoint.pagination_enabled:
+            for key, value in data.items():
+                xml.startElement(key, {})
+                if key != 'data':
+                    xml.characters(force_text(value))
+                else:
+                    self.xml_for_endpoint(xml, value, endpoint)
+                xml.endElement(key)
+        else:
+            self.xml_for_endpoint(xml, data, endpoint)
 
         xml.endElement(self.root_tag_name)
         xml.endDocument()
         return stream.getvalue()
 
     def _to_xml(self, xml, data):
-        if isinstance(data, _XMLNamedNode):
-            lst = data.node
-            for item in lst:
-                xml.startElement(data.name, {})
-                self._to_xml(xml, item)
-                xml.endElement(data.name)
-        elif isinstance(data, (list, tuple)):
-            raise ValueError('Unexpected XML structure: list')
-        elif isinstance(data, dict):
-            for key, value in data.items():
-                xml.startElement(key, {})
-                self._to_xml(xml, value)
-                xml.endElement(key)
+        return NotImplemented
 
-        elif data is None:
-            # Don't output any value
-            pass
-
+    def xml_for_endpoint(self, xml, data, endpoint: Endpoint):
+        schema: SchemaFieldType = endpoint.schema
+        if isinstance(data, list):
+            for item in data:
+                self.xml_for_field(xml, item, endpoint.name, schema)
         else:
-            xml.characters(force_text(data))
+            self.xml_for_field(xml, data, endpoint.name, schema)
+
+    def xml_for_field(self, xml, item, parent_name, field: SchemaFieldType):
+        if isinstance(field, Field):
+            xml.startElement(parent_name, {})
+            xml.characters(force_text(item))
+            xml.endElement(parent_name)
+        elif isinstance(field, Select):
+            xml.startElement(parent_name, {})
+            select_from = EndpointStorage.endpoints[field.endpoint]
+            self.xml_for_endpoint(xml, item, select_from)
+            xml.endElement(parent_name)
+        elif isinstance(field, Object):
+            name = field.name or parent_name or 'item'
+            xml.startElement(name, {})
+            for key, value in field.fields.items():
+                self.xml_for_field(xml, item[key], key, value)
+            xml.endElement(name)
+        else:
+            raise ValueError(f"Unknown schema field type: {field}")

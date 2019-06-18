@@ -3,7 +3,8 @@ from drf_yasg import openapi
 from drf_yasg.inspectors import SwaggerAutoSchema
 from rest_framework.settings import api_settings
 
-from api.models import SchemaEntry
+from api.endpoint import *
+from api.endpoint_loader import EndpointStorage
 
 
 class ApiSwaggerAutoSchema(SwaggerAutoSchema):
@@ -39,7 +40,7 @@ class ApiSwaggerAutoSchema(SwaggerAutoSchema):
 
     def __init__(self, view, path, method, components, request, overrides):
         super(SwaggerAutoSchema, self).__init__(view, path, method, components, request, overrides)
-        endpoint = view.endpoint
+        endpoint: Endpoint = view.endpoint
         parameter_fields = self.endpoint_parameters(endpoint)
         normal_response = self.endpoint_response(endpoint)
 
@@ -50,66 +51,85 @@ class ApiSwaggerAutoSchema(SwaggerAutoSchema):
             200: normal_response
         }
 
-    def endpoint_parameters(self, endpoint):
-        parameters = endpoint.parameters.all()
+    def endpoint_parameters(self, endpoint: Endpoint):
         parameter_fields = [
             openapi.Parameter(
                 name=param.name,
                 required=param.required,
                 in_=openapi.IN_QUERY,
-                type=openapi.TYPE_STRING
+                type=param.type.value,
+                description=param.description or None,
+                example=param.example or None,
+                default=param.default or None
             )
-            for param in parameters
+            for param in endpoint.params
         ]
 
-        if endpoint.pagination_key is not None:
+        parameter_fields += [
+            openapi.Parameter(
+                name=param.name,
+                required=True,
+                in_=openapi.IN_QUERY,
+                type=param.type.value,
+                description=param.description or None,
+                example=param.example or None,
+                default=param.default or None
+            )
+            for param in endpoint.sql_params
+        ]
+
+        if endpoint.pagination_enabled:
             parameter_fields += self.pagination_parameters
 
         parameter_fields += self.format_parameters
         return parameter_fields
 
-    def endpoint_response(self, endpoint):
-        endpoint_schema = self.endpoint_schema(endpoint)
-        schema = openapi.Schema(properties={
-            'has_next': openapi.Schema(description='next page is exist', type=openapi.TYPE_BOOLEAN),
-            'has_prev': openapi.Schema(description='previous page is exist', type=openapi.TYPE_BOOLEAN),
-            'next': openapi.Schema(description='next page link', type=openapi.TYPE_STRING),
-            'prev': openapi.Schema(description='previous page link', type=openapi.TYPE_STRING),
-            'data': openapi.Schema(description='response data', items=endpoint_schema, type=openapi.TYPE_ARRAY)
-        }, type=openapi.TYPE_OBJECT)
+    def endpoint_response(self, endpoint: Endpoint):
+        schema = self.endpoint_schema(endpoint)
+        if endpoint.pagination_enabled:
+            schema = openapi.Schema(properties={
+                'has_next': openapi.Schema(description='next page is exist', type=openapi.TYPE_BOOLEAN),
+                'has_prev': openapi.Schema(description='previous page is exist', type=openapi.TYPE_BOOLEAN),
+                'next': openapi.Schema(description='next page link', type=openapi.TYPE_STRING),
+                'prev': openapi.Schema(description='previous page link', type=openapi.TYPE_STRING),
+                'data': openapi.Schema(description='response data', items=schema, type=openapi.TYPE_ARRAY)
+            }, type=openapi.TYPE_OBJECT)
         return openapi.Response('Normal', schema=schema)
 
-    def endpoint_schema(self, endpoint):
-        scheme = list(endpoint.schema.entries.all())
+    def endpoint_schema_field(self, field: SchemaFieldType):
+        if isinstance(field, Field):
+            return openapi.Schema(
+                type=field.type.value,
+                description=field.description or None,
+                example=field.example or None
+            )
+        elif isinstance(field, Select):
+            nested_endpoint = EndpointStorage.endpoints[field.endpoint]
+            nested_endpoint_scheme = self.endpoint_schema(nested_endpoint)
+            return openapi.Schema(
+                description=field.description,
+                items=nested_endpoint_scheme,
+                type=openapi.TYPE_ARRAY
+            )
+        elif isinstance(field, Object):
+            nested_result = {
+                key: self.endpoint_schema_field(value)
+                for key, value in field.fields.items()
+            }
+            schema = openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties=nested_result,
+                title=field.name or None,
+                description=field.description or None
+            )
+            if field.many:
+                return openapi.Schema(description='aggregated data', items=schema, type=openapi.TYPE_ARRAY)
+            else:
+                return schema
+        else:
+            raise ValueError(f"Unknown schema field type: {field}")
 
-        def build_data_by_schema(i, lvl):
-            res = {}
-            while i < len(scheme) and scheme[i].level == lvl:
-                node_scheme: SchemaEntry = scheme[i]
-                name = node_scheme.name
-                if node_scheme.entry_type == SchemaEntry.NESTED:
-                    nested_result, i = build_data_by_schema(i + 1, node_scheme.level + 1)
-                    res[name] = openapi.Schema(type=openapi.TYPE_OBJECT, properties=nested_result)
-                    continue
-                elif node_scheme.entry_type == SchemaEntry.SELECT:
-                    endpoint_name = node_scheme.value
-                    field_name = node_scheme.name
-                    nested_endpoint = endpoint.endpoint_selects.get(select_from__name=endpoint_name).select_from
-                    nested_endpoint_scheme = self.endpoint_schema(nested_endpoint)
-                    res[field_name] = openapi.Schema(
-                        description=f'{nested_endpoint.name} data',
-                        items=nested_endpoint_scheme, type=openapi.TYPE_ARRAY
-                    )
-                else:
-                    _type = {
-                        'str': openapi.TYPE_STRING,
-                        'int': openapi.TYPE_INTEGER
-                    }.get(node_scheme.type, node_scheme.type)
-                    res[name] = openapi.Schema(type=_type)
-
-                i += 1
-            return res, i
-
-        result, _ = build_data_by_schema(0, 0)
-
-        return openapi.Schema(title=endpoint.name, type=openapi.TYPE_OBJECT, properties=result)
+    def endpoint_schema(self, endpoint: Endpoint):
+        result = self.endpoint_schema_field(endpoint.schema)
+        result.title = endpoint.name
+        return result

@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '-la_p$f%^0b1n)#00t6(rk#un4c4-^zqlmkeeqibl5l9t6)pui'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -94,7 +94,7 @@ SWAGGER_SETTINGS = {
 
 # Queries directory settings
 
-QUERIES_DIR = os.path.join(BASE_DIR, 'queries')
+QUERIES_DIR = os.path.join(BASE_DIR, 'galaxy-descriptions')
 
 # Pagination settings
 
