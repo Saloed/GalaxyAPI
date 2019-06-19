@@ -61,7 +61,7 @@ def timeit(func):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        print(func.__name__, end - start, *args, *kwargs.items())
+        print(func.__name__, end - start)
         return result
 
     return call

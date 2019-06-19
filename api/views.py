@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List, Dict, Any
 
 from django.conf import settings
@@ -67,24 +68,25 @@ class EndpointView(APIView):
         ]
         query = query_execution.Query(self.endpoint.sql)
 
-        if self.endpoint.aggregation_enabled:
-            # todo: aggregation
-            raise NotImplemented
-
-            pass
-
         page = None
         if self.endpoint.pagination_enabled:
             page_number = int(request_params.get(settings.PAGE_QUERY_PARAM, 0))
             page_size = int(request_params.get(settings.PAGE_SIZE_QUERY_PARAM, settings.DEFAULT_PAGE_SIZE))
             page = query_execution.Page(self.endpoint.key, page_size, page_number)
 
-        query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, page)
+        sql_page = None if self.endpoint.aggregation_enabled else page
+        query_result = query_execution.execute_query(query, sql_required_parameters, sql_parameters, sql_page)
 
         selected_data = EndpointSelectWrapper(self.endpoint.selects)
         selected_data.load(query_result, request)
 
-        data = self.convert_data(query_result, selected_data)
+        if self.endpoint.aggregation_enabled:
+            data = self.convert_data_aggregated(query_result, selected_data)
+            if self.endpoint.pagination_enabled:
+                # todo: rewrite
+                data = data[:page.size]
+        else:
+            data = self.convert_data(query_result, selected_data)
 
         if self.endpoint.pagination_enabled:
             data_with_pagination = self.paginate(request, data, page)
@@ -127,6 +129,54 @@ class EndpointView(APIView):
         return [
             self.convert_single_record(record, self.endpoint.schema, selected_data)
             for record in data
+        ]
+
+    def convert_single_record_aggregated(self, record, all_data, field: SchemaFieldType,
+                                         selected_data: EndpointSelectWrapper):
+        if isinstance(field, Field):
+            return record[field.db_name]
+        elif isinstance(field, Select):
+            return selected_data.get_data(field.endpoint, record)
+        elif isinstance(field, Object):
+            if not field.aggregate and not field.many:
+                return {
+                    key: self.convert_single_record_aggregated(record, all_data, value, selected_data)
+                    for key, value in field.fields.items()
+                }
+            if not field.aggregate and field.many:
+                return [
+                    {
+                        key: self.convert_single_record_aggregated(record, all_data, value, selected_data)
+                        for key, value in field.fields.items()
+                    } for record in all_data
+                ]
+            if field.aggregate and field.many:
+                data = defaultdict(list)
+                for item in all_data:
+                    key = item[field.aggregation_field]
+                    data[key].append(item)
+                aggregated_data = list(data.values())
+
+                return [
+                    {
+                        key: self.convert_single_record_aggregated(records[0], records, value, selected_data)
+                        for key, value in field.fields.items()
+                    }
+                    for records in aggregated_data
+                ]
+            raise ValueError(f"Aggregation on non many field: {field}")
+
+        else:
+            raise ValueError(f"Unknown schema field type: {field}")
+
+    def convert_data_aggregated(self, data: List[Dict[str, Any]], selected_data: EndpointSelectWrapper):
+        result_data = defaultdict(list)
+        for item in data:
+            key = item[self.endpoint.key]
+            result_data[key].append(item)
+        return [
+            self.convert_single_record_aggregated(records[0], records, self.endpoint.schema, selected_data)
+            for records in result_data.values()
         ]
 
 

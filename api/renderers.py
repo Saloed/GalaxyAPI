@@ -62,9 +62,18 @@ class ApiXmlRenderer(XMLRenderer):
             xml.endElement(parent_name)
         elif isinstance(field, Object):
             name = field.name or parent_name or 'item'
-            xml.startElement(name, {})
-            for key, value in field.fields.items():
-                self.xml_for_field(xml, item[key], key, value)
-            xml.endElement(name)
+            if not field.many:
+                xml.startElement(name, {})
+                for key, value in field.fields.items():
+                    self.xml_for_field(xml, item[key], key, value)
+                xml.endElement(name)
+            else:
+                xml.startElement(parent_name, {})
+                for element in item:
+                    xml.startElement(name, {})
+                    for key, value in field.fields.items():
+                        self.xml_for_field(xml, element[key], key, value)
+                    xml.endElement(name)
+                xml.endElement(parent_name)
         else:
             raise ValueError(f"Unknown schema field type: {field}")
