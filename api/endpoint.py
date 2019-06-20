@@ -7,7 +7,8 @@ class TypeEnum(Enum):
     STRING = 'string'
     INT = 'integer'
     BOOL = 'boolean'
-    DATETIME = 'datetime'
+    DATE = 'date'
+    DATETIME = 'date-time'
 
     @classmethod
     def create(cls, value):
@@ -17,6 +18,8 @@ class TypeEnum(Enum):
             return TypeEnum.INT
         elif value == cls.BOOL.value:
             return TypeEnum.BOOL
+        elif value == cls.DATE.value:
+            return TypeEnum.DATE
         elif value == cls.DATETIME.value:
             return TypeEnum.DATETIME
         else:

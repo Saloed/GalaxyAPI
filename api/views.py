@@ -1,15 +1,18 @@
+import datetime
 from collections import defaultdict
 from typing import List, Dict, Any
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import permissions
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api import query_execution
-from api.endpoint import Endpoint, SchemaFieldType, Field, Select, Object
+from api.endpoint import Endpoint, SchemaFieldType, Field, Select, Object, Parameter, TypeEnum
 from api.endpoint_data_wrapper import EndpointSelectWrapper
 from api.endpoint_loader import load_endpoints
 from api.renderers import ApiXmlRenderer
@@ -39,9 +42,30 @@ class EndpointView(APIView):
     endpoint: Endpoint = None
     swagger_schema = ApiSwaggerAutoSchema
 
-    def get(self, request, *args, **kwargs):
-        request_params = request.GET
+    def validate_parameter(self, param, param_name: str, param_type: TypeEnum):
+        if param_type in (TypeEnum.STRING, TypeEnum.INT, TypeEnum.BOOL):
+            converters = {TypeEnum.STRING: str, TypeEnum.INT: int, TypeEnum.BOOL: bool}
+            converter = converters[param_type]
+            try:
+                converter(param)
+                return param
+            except Exception:
+                message = f"Incorrect parameter {param_name}: expected {param_type.value}, actual {param}"
+                raise SuspiciousOperation(message)
+        elif param_type in (TypeEnum.DATETIME, TypeEnum.DATE):
+            formats = {TypeEnum.DATETIME: "%d.%m.%Y %H:%M:%S", TypeEnum.DATE: "%d.%m.%Y"}
+            _format = formats[param_type]
+            try:
+                parsed = datetime.datetime.strptime(param, _format)
+                if param_type == TypeEnum.DATE:
+                    parsed = parsed.date()
+                return parsed
+            except Exception:
+                message = f"Incorrect format for parameter {param_name}: expected {_format}, actual {param}"
+                raise SuspiciousOperation(message)
+        return param
 
+    def process_parameters(self, request_params):
         required_parameters = self.endpoint.sql_params + [
             param
             for param in self.endpoint.params
@@ -55,17 +79,29 @@ class EndpointView(APIView):
             parameter_names = ', '.join([param.name for param in unspecified_parameters])
             raise SuspiciousOperation(f"Required parameters not specified: {parameter_names}")
 
-        sql_parameters = [
-            query_execution.Param(param.name, param.condition, request_params[param.name])
-            for param in self.endpoint.params
-            if param.name in request_params
-        ]
-        sql_required_parameters = self.endpoint.sql_params[:]
-        sql_required_parameters.sort(key=lambda it: it.position)
-        sql_required_parameters = [
-            query_execution.RequiredParam(param.name, request_params[param.name])
-            for param in sql_required_parameters
-        ]
+        sql_parameters = []
+        sql_required_parameters = []
+        for param in self.endpoint.params:
+            if param.name not in request_params:
+                continue
+            value = request_params[param.name]
+            validated_value = self.validate_parameter(value, param.name, param.type)
+            sql_param = query_execution.Param(param.name, param.condition, validated_value)
+            sql_parameters.append(sql_param)
+
+        for param in sorted(self.endpoint.sql_params, key=lambda it: it.position):
+            value = request_params[param.name]
+            validated_value = self.validate_parameter(value, param.name, param.type)
+            sql_param = query_execution.RequiredParam(param.name, validated_value)
+            sql_required_parameters.append(sql_param)
+
+        return sql_parameters, sql_required_parameters
+
+    @method_decorator(cache_page(settings.API_RESPONSE_CACHE_TIMEOUT_SECONDS))
+    def get(self, request, *args, **kwargs):
+        request_params = request.GET
+
+        sql_parameters, sql_required_parameters = self.process_parameters(request_params)
         query = query_execution.Query(self.endpoint.sql)
 
         page = None
@@ -83,8 +119,9 @@ class EndpointView(APIView):
         if self.endpoint.aggregation_enabled:
             data = self.convert_data_aggregated(query_result, selected_data)
             if self.endpoint.pagination_enabled:
-                # todo: rewrite
-                data = data[:page.size]
+                idx_from = page.number * page.size
+                idx_to = (page.number + 1) * page.size
+                data = data[idx_from:idx_to]
         else:
             data = self.convert_data(query_result, selected_data)
 

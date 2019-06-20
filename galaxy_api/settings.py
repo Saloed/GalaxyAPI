@@ -147,6 +147,15 @@ DATABASES = {
     }
 }
 
+SQL_QUERY_CACHE_TIMEOUT_SECONDS = 60 * 60
+API_RESPONSE_CACHE_TIMEOUT_SECONDS = 60 * 60
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
+    }
+}
+
 if not os.path.exists(LOG_ROOT):
     os.makedirs(LOG_ROOT)
 

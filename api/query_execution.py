@@ -1,3 +1,4 @@
+import hashlib
 import os
 import re
 from typing import Union, List, Dict, Any
@@ -5,6 +6,8 @@ from typing import Union, List, Dict, Any
 import sqlparse
 from django.conf import settings
 from django.db import connections
+from django.utils import encoding
+from django.core.cache import cache
 
 
 class Query:
@@ -18,11 +21,18 @@ class Param:
         self.condition = condition
         self.value = value
 
+    def get_value(self):
+        substitution_count = len(re.findall('(%s)', self.condition))
+        return [self.value] * substitution_count
+
 
 class RequiredParam:
     def __init__(self, name: str, value: Union[str, int]):
         self.name = name
         self.value = value
+
+    def get_value(self):
+        return [self.value]
 
 
 class Page:
@@ -109,7 +119,25 @@ class _SqlQuery:
             ]
 
 
-def execute_query(
+def _generate_cache_key(query: Query, required_params: List[RequiredParam], params: List[Param], page: Page):
+    required_params_key = ','.join([f'{param.name}:{param.value}' for param in required_params])
+    params_key = ','.join([f'{param.name}:{param.value}' for param in params])
+    page_key = page and f'{page.pagination_key}:{page.size}:{page.number}'
+    key = f'{query.name}| rp {required_params_key}| p {params_key}| pg {page_key}'
+    key_hash = hashlib.sha256(encoding.force_bytes(key))
+    digest = key_hash.hexdigest()
+    return f'galaxy.api.query.{digest}'
+
+
+def _get_param_values(params):
+    return [
+        value
+        for param in params
+        for value in param.get_value()
+    ]
+
+
+def _execute_query(
         query: Query, required_params: List[RequiredParam], params: List[Param], page: Page
 ) -> List[Dict[str, Any]]:
     with open(os.path.join(settings.QUERIES_DIR, 'sql', query.name), encoding='utf8') as sql_file:
@@ -127,4 +155,18 @@ def execute_query(
     if page is not None:
         sql_query.paginate(page.pagination_key, page.size, page.number)
 
-    return sql_query.execute([param.value for param in required_params], [param.value for param in params])
+    required_param_values = _get_param_values(required_params)
+    param_values = _get_param_values(params)
+    return sql_query.execute(required_param_values, param_values)
+
+
+def execute_query(
+        query: Query, required_params: List[RequiredParam], params: List[Param], page: Page
+) -> List[Dict[str, Any]]:
+    key = _generate_cache_key(query, required_params, params, page)
+    cached_result = cache.get(key)
+    if cached_result:
+        return cached_result
+    result = _execute_query(query, required_params, params, page)
+    cache.set(key, result, settings.SQL_QUERY_CACHE_TIMEOUT_SECONDS)
+    return result
