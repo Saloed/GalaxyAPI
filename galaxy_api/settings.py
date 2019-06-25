@@ -107,7 +107,7 @@ QUERIES_DIR = os.path.join(BASE_DIR, 'galaxy-descriptions')
 
 PAGE_QUERY_PARAM = 'page'
 PAGE_SIZE_QUERY_PARAM = 'pagesize'
-DEFAULT_PAGE_SIZE = config.get('API', 'PAGE_SIZE', fallback=20)
+DEFAULT_PAGE_SIZE = int(config.get('API', 'PAGE_SIZE', fallback=20))
 
 LOG_ROOT = config.get('LOG', 'DIR', fallback=os.path.join(BASE_DIR, "log"))
 
@@ -153,8 +153,8 @@ DATABASES = {
     }
 }
 
-SQL_QUERY_CACHE_TIMEOUT_SECONDS = config.get('API', 'CACHE_TIMEOUT', fallback=60 * 60)
-API_RESPONSE_CACHE_TIMEOUT_SECONDS = config.get('API', 'CACHE_TIMEOUT', fallback=60 * 60)
+SQL_QUERY_CACHE_TIMEOUT_SECONDS = int(config.get('API', 'CACHE_TIMEOUT', fallback=60 * 60))
+API_RESPONSE_CACHE_TIMEOUT_SECONDS = int(config.get('API', 'CACHE_TIMEOUT', fallback=60 * 60))
 
 CACHES = {
     'default': {
