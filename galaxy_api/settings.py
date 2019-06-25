@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+import configparser
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 
@@ -19,13 +20,18 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
+config = configparser.ConfigParser()
+config_path = os.environ.get('CONFIG', None)
+if config_path:
+    config.read(config_path, encoding='utf-8')
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '-la_p$f%^0b1n)#00t6(rk#un4c4-^zqlmkeeqibl5l9t6)pui'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = config.get('API', 'ALLOWED_HOSTS', fallback='*').split(',')
 
 # Application definition
 
@@ -41,6 +47,7 @@ INSTALLED_APPS = [
 ]
 
 STATIC_URL = '/static/'
+STATIC_ROOT = '/var/www/galaxy-api/static/'
 SITE_ID = 1
 
 MIDDLEWARE = [
@@ -78,7 +85,7 @@ TEMPLATES = [
 
 API_KEY_HEADER_NAME = 'X-Api-Key'
 
-API_KEY = None  # configure
+API_KEY = config.get('API', 'KEY', fallback=None)
 
 SWAGGER_SETTINGS = {
     'DEFAULT_INFO': 'api.urls.api_info',
@@ -100,9 +107,9 @@ QUERIES_DIR = os.path.join(BASE_DIR, 'galaxy-descriptions')
 
 PAGE_QUERY_PARAM = 'page'
 PAGE_SIZE_QUERY_PARAM = 'pagesize'
-DEFAULT_PAGE_SIZE = 20
+DEFAULT_PAGE_SIZE = config.get('API', 'PAGE_SIZE', fallback=20)
 
-LOG_ROOT = os.path.join(BASE_DIR, "log")
+LOG_ROOT = config.get('LOG', 'DIR', fallback=os.path.join(BASE_DIR, "log"))
 
 LOG_HANDLERS = ['console', 'logfile', ]
 
@@ -121,9 +128,8 @@ USE_TZ = True
 
 DEBUG_TRUE_LOG_LEVEL = 'INFO'
 
-DEBUG_FALSE_LOG_LEVEL = 'WARNING'
+DEBUG_FALSE_LOG_LEVEL = config.get('LOG', 'LEVEL', fallback='WARNING')
 
-from galaxy_api.local_settings import *
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
@@ -135,11 +141,11 @@ DATABASES = {
     },
     'galaxy_db': {
         'ENGINE': 'sql_server.pyodbc',
-        'NAME': DB_NAME,
-        'USER': DB_USER,
-        'PASSWORD': DB_PASSWORD,
-        'HOST': DB_HOST,
-        'PORT': DB_PORT,
+        'NAME': config['DATABASE']['NAME'],
+        'USER': config['DATABASE']['USER'],
+        'PASSWORD': config['DATABASE']['PASSWORD'],
+        'HOST': config['DATABASE']['HOST'],
+        'PORT': config['DATABASE']['PORT'],
 
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
@@ -147,8 +153,8 @@ DATABASES = {
     }
 }
 
-SQL_QUERY_CACHE_TIMEOUT_SECONDS = 60 * 60
-API_RESPONSE_CACHE_TIMEOUT_SECONDS = 60 * 60
+SQL_QUERY_CACHE_TIMEOUT_SECONDS = config.get('API', 'CACHE_TIMEOUT', fallback=60 * 60)
+API_RESPONSE_CACHE_TIMEOUT_SECONDS = config.get('API', 'CACHE_TIMEOUT', fallback=60 * 60)
 
 CACHES = {
     'default': {
@@ -183,7 +189,7 @@ LOGGING = {
         'logfile': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_ROOT + '/logfile.log',
+            'filename': os.path.join(LOG_ROOT, 'logfile.log'),
             'maxBytes': 5 * 1024 * 1024,
             'backupCount': 1000,
             'encoding': 'utf8',
