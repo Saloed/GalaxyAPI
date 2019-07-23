@@ -109,7 +109,7 @@ PAGE_QUERY_PARAM = 'page'
 PAGE_SIZE_QUERY_PARAM = 'pagesize'
 DEFAULT_PAGE_SIZE = int(config.get('API', 'PAGE_SIZE', fallback=20))
 
-LOG_ROOT = config.get('LOG', 'DIR', fallback=os.path.join(BASE_DIR, "log"))
+LOG_ROOT = '/var/log/galaxy-api/'
 
 LOG_HANDLERS = ['console', 'logfile', ]
 

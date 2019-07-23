@@ -14,3 +14,7 @@ ALLOWED_HOSTS = *
 [LOG]
 DIR = /var/log/galaxy-api
 LEVEL = INFO
+
+[SSL]
+PEM = /ssl-cert.pem
+KEY = /ssl-cert.key
