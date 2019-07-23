@@ -100,8 +100,7 @@ SWAGGER_SETTINGS = {
 }
 
 # Queries directory settings
-
-QUERIES_DIR = os.path.join(BASE_DIR, 'galaxy-descriptions')
+QUERIES_DIR = os.environ.get('GALAXY_DESCRIPTIONS')
 
 # Pagination settings
 

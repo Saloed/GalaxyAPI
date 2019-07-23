@@ -26,8 +26,8 @@ def get_image(config):
     return 'galaxy-api'
 
 
-def get_additional_flags(config):
-    return '-it --rm'
+def get_additional_flags(config, args):
+    return combine('--rm', '-it')
 
 
 def get_config_file_mapping(config_path):
@@ -87,7 +87,18 @@ def combine(*items):
     return ' '.join(items)
 
 
-def run(rel_config_path):
+def get_descriptions(config):
+    if not config.has_option('API', 'DESCRIPTIONS'):
+        raise ValueError('Descriptions path is required')
+    descriptions = config.get('API', 'DESCRIPTIONS')
+    return combine(
+        get_file_mapping(descriptions, '/var/galaxy/descriptions'),
+        get_environment('GALAXY_DESCRIPTIONS', '/var/galaxy/descriptions')
+    )
+
+
+def run(args):
+    rel_config_path = args.config
     config = configparser.ConfigParser()
     config.read(rel_config_path)
 
@@ -96,14 +107,15 @@ def run(rel_config_path):
         get_port(config),
         get_name(config),
         get_config_file_mapping(rel_config_path),
+        get_descriptions(config),
         get_log_file_mapping(config),
         get_ssl_config(config),
-        get_additional_flags(config),
+        get_additional_flags(config, args),
         get_image(config)
     )
     os.system(command)
 
 
 if __name__ == '__main__':
-    args = parser.parse_args()
-    run(args.config)
+    parsed_args = parser.parse_args()
+    run(parsed_args)
