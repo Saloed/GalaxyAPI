@@ -11,9 +11,9 @@ server {
     {% if NGINX_ENABLE_SSL|default('False') == 'True' %}
     listen 443;
     ssl on;
-
-    ssl_certificate /etc/ssl/certs/ssl-cert.pem;
-    ssl_certificate_key /etc/ssl/private/ssl-cert.key;
+    ssl_password_file /etc/nginx/certs/ssl-cert.pass;
+    ssl_certificate /etc/nginx/certs/ssl-cert.pem;
+    ssl_certificate_key /etc/nginx/certs/ssl-cert.key;
     {% else %}
     listen 80;
     {% endif %}

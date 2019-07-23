@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 import os
 
 from argparse import ArgumentParser
@@ -13,8 +13,9 @@ parser.add_argument('config', type=str, help='API configuration file')
 
 
 def get_port(config):
-    port = 80 if 'SSL' not in config.sections() else 443
-    return '-p 8000:%d' % port
+    port = 80 if not config.has_section('SSL') else 443
+    host_port = 8000 if not config.has_option('API', 'PORT') else config.getint('API', 'PORT')
+    return '-p %d:%d' % (host_port, port)
 
 
 def get_name(config):
@@ -34,7 +35,7 @@ def get_config_file_mapping(config_path):
 
 
 def get_log_file_mapping(config):
-    if 'LOG' not in config.sections():
+    if not config.has_section('LOG'):
         return ''
     log_dir = config.get('LOG', 'DIR')
     logs = {
@@ -58,16 +59,18 @@ def get_log_file_mapping(config):
 
 
 def get_ssl_config(config):
-    if 'SSL' not in config.sections():
+    if not config.has_section('SSL'):
         return ''
 
-    pem_file = config.get('SSL', 'PEM')
+    cert_file = config.get('SSL', 'CERT')
     key_file = config.get('SSL', 'KEY')
+    password_file = config.get('SSL', 'PASSWORD')
 
     return combine(
         get_environment('NGINX_ENABLE_SSL', 'True'),
-        get_file_mapping(pem_file, '/etc/nginx/certs/ssl-cert.pem'),
-        get_file_mapping(key_file, '/etc/nginx/certs/ssl-cert.key')
+        get_file_mapping(cert_file, '/etc/nginx/certs/ssl-cert.pem'),
+        get_file_mapping(key_file, '/etc/nginx/certs/ssl-cert.key'),
+        get_file_mapping(password_file, '/etc/nginx/certs/ssl-cert.pass')
     )
 
 

@@ -10,11 +10,13 @@ KEY = 12345
 PAGE_SIZE = 20
 CACHE_TIMEOUT = 3600
 ALLOWED_HOSTS = *
+PORT = 8000
 
 [LOG]
 DIR = /var/log/galaxy-api
 LEVEL = INFO
 
 [SSL]
-PEM = /ssl-cert.pem
+CERT = /ssl-cert.pem
 KEY = /ssl-cert.key
+PASSWORD = /ssl-cert-pass.txt
