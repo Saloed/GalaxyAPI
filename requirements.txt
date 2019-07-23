@@ -5,7 +5,6 @@ pyodbc==4.0.26
 django-pyodbc-azure==2.1.0.0
 sqlparse==0.3.0
 jsonfield==2.0.2
-requests==2.21.0
 djangorestframework==3.9.4
 djangorestframework-xml==1.4.0
 drf-yasg==1.15.0

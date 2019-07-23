@@ -17,21 +17,21 @@ RUN curl https://packages.microsoft.com/config/debian/9/prod.list > /etc/apt/sou
 
 WORKDIR /usr/src/app
 
-RUN pip3 install uwsgi
+RUN pip3 install uwsgi j2cli
 
 COPY requirements.txt ./
-
 RUN pip3 install -r requirements.txt
 
-
+COPY nginx.conf.j2 /templates/
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
-COPY nginx-app.conf /etc/nginx/sites-available/default
+
 COPY supervisor-app.conf /etc/supervisor/conf.d/
+
+COPY configuration_entrypoint.sh /
 
 COPY . .
 
 ENV CONFIG="/etc/galaxy/config"
 
-EXPOSE 80
-
-CMD ["/bin/sh", "./run_server.sh"]
+ENTRYPOINT ["/configuration_entrypoint.sh"]
+CMD ["supervisord", "-n"]
