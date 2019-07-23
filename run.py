@@ -41,6 +41,7 @@ def get_log_file_mapping(config):
         'api': '/var/log/galaxy-api',
         'nginx': '/var/log/nginx',
         'supervisor': '/var/log/supervisor',
+        'redis': '/var/log/redis'
     }
     log_mappings = []
     for name, path in logs.items():

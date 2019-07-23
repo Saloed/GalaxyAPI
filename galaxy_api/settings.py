@@ -157,8 +157,12 @@ SQL_QUERY_CACHE_TIMEOUT_SECONDS = int(config.get('API', 'CACHE_TIMEOUT', fallbac
 API_RESPONSE_CACHE_TIMEOUT_SECONDS = int(config.get('API', 'CACHE_TIMEOUT', fallback=60 * 60))
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "unix:///tmp/redis.sock?db=0",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
     }
 }
 

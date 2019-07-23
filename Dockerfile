@@ -27,6 +27,9 @@ RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 
 COPY supervisor-app.conf /etc/supervisor/conf.d/
 
+RUN apt-get install -y redis-server
+COPY redis.conf /etc/redis/redis.conf
+
 COPY configuration_entrypoint.sh /
 
 COPY . .
