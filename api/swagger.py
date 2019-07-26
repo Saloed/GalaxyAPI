@@ -27,6 +27,16 @@ class ApiSwaggerAutoSchema(SwaggerAutoSchema):
         ),
     ]
 
+    authentication_parameters = [
+        openapi.Parameter(
+            settings.API_KEY_HEADER_NAME,
+            description='Header with Api Key',
+            required=True,
+            in_=openapi.IN_HEADER,
+            type=openapi.TYPE_STRING
+        )
+    ]
+
     format_parameters = [
         openapi.Parameter(
             api_settings.URL_FORMAT_OVERRIDE,
@@ -44,8 +54,8 @@ class ApiSwaggerAutoSchema(SwaggerAutoSchema):
         parameter_fields = self.endpoint_parameters(endpoint)
         normal_response = self.endpoint_response(endpoint)
 
-        self.overrides['operation_summary'] = f'Get list of {endpoint.name}'
-        self.overrides['operation_description'] = f'{endpoint.name} endpoint'
+        self.overrides['operation_summary'] = endpoint.description or f'Get list of {endpoint.name}'
+        self.overrides['operation_description'] = endpoint.description or f'{endpoint.name} endpoint'
         self.overrides['manual_parameters'] = parameter_fields
         self.overrides['responses'] = {
             200: normal_response
@@ -82,6 +92,7 @@ class ApiSwaggerAutoSchema(SwaggerAutoSchema):
             parameter_fields += self.pagination_parameters
 
         parameter_fields += self.format_parameters
+        parameter_fields += self.authentication_parameters
         return parameter_fields
 
     def endpoint_response(self, endpoint: Endpoint):
