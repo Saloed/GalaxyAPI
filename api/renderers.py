@@ -1,3 +1,4 @@
+from rest_framework.exceptions import ErrorDetail
 from rest_framework_xml.renderers import XMLRenderer
 from django.utils.xmlutils import SimplerXMLGenerator
 from django.utils.encoding import force_text
@@ -24,6 +25,24 @@ class ApiXmlRenderer(XMLRenderer):
         xml.startDocument()
         xml.startElement(self.root_tag_name, {})
 
+        if self.is_error_response(data):
+            self.render_error_response(xml, data)
+        else:
+            self.render_response(xml, data, endpoint)
+
+        xml.endElement(self.root_tag_name)
+        xml.endDocument()
+        return stream.getvalue()
+
+    def is_error_response(self, data):
+        return 'detail' in data and isinstance(data['detail'], ErrorDetail)
+
+    def render_error_response(self, xml, data):
+        xml.startElement('error', {})
+        xml.characters(force_text(data['detail']))
+        xml.endElement('error')
+
+    def render_response(self, xml, data, endpoint):
         if endpoint.pagination_enabled:
             for key, value in data.items():
                 xml.startElement(key, {})
@@ -34,10 +53,6 @@ class ApiXmlRenderer(XMLRenderer):
                 xml.endElement(key)
         else:
             self.xml_for_endpoint(xml, data, endpoint)
-
-        xml.endElement(self.root_tag_name)
-        xml.endDocument()
-        return stream.getvalue()
 
     def _to_xml(self, xml, data):
         return NotImplemented
