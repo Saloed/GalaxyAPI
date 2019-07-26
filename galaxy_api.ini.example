@@ -1,9 +1,9 @@
 [DATABASE]
-NAME = 'name'
-USER = 'SA'
-PASSWORD = 'pass'
-HOST = '127.0.0.1'
-PORT = '1433'
+NAME = name
+USER = SA
+PASSWORD = pass
+HOST = 127.0.0.1
+PORT = 1433
 
 [API]
 DESCRIPTIONS = /var/galaxy-descriptions

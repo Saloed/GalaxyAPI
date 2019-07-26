@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 import os
 
 from argparse import ArgumentParser
@@ -23,7 +23,7 @@ def get_name(config):
 
 
 def get_image(config):
-    return 'galaxy-api'
+    return 'conyashka/galaxy-api:latest'
 
 
 def get_additional_flags(config, args):
