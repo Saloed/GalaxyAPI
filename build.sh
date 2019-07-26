@@ -1,1 +1,2 @@
-docker build -t galaxy-api .
+#!/bin/bash
+docker build -t conyashka/galaxy-api:latest .
