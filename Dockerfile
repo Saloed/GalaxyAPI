@@ -16,6 +16,9 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > mic
     ACCEPT_EULA=Y apt-get install -y --allow-unauthenticated msodbcsql17 && \
     apt-get install -y --allow-unauthenticated unixodbc-dev
 
+RUN cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.ORI && \
+    sed -i "s/\(MinProtocol *= *\).*/\1TLSv1.0 /" "/etc/ssl/openssl.cnf" && \
+    sed -i "s/\(CipherString *= *\).*/\1DEFAULT@SECLEVEL=1 /" "/etc/ssl/openssl.cnf"
 
 WORKDIR /usr/src/app
 

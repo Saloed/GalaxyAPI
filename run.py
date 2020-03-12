@@ -10,6 +10,7 @@ except ImportError:
 
 parser = ArgumentParser()
 parser.add_argument('config', type=str, help='API configuration file')
+parser.add_argument('--debug', action='store_true', help='Runs container with shell')
 
 
 def get_port(config):
@@ -97,6 +98,11 @@ def get_descriptions(config):
     )
 
 
+def get_debug_mode(config):
+    if not config.debug:
+        return ''
+    return '--entrypoint /bin/bash'
+
 def run(args):
     rel_config_path = args.config
     config = configparser.ConfigParser()
@@ -110,6 +116,7 @@ def run(args):
         get_descriptions(config),
         get_log_file_mapping(config),
         get_ssl_config(config),
+        get_debug_mode(args),
         get_additional_flags(config, args),
         get_image(config)
     )
