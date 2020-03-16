@@ -28,7 +28,7 @@ def get_image(config):
 
 
 def get_additional_flags(config, args):
-    return combine('--rm', '-it')
+    return combine('--rm', '-d')
 
 
 def get_config_file_mapping(config_path):
