@@ -36,9 +36,9 @@ class Parameter:
     operation: str
     condition: str
     required: bool
-    description: str
-    default: str
-    example: str
+    description: str = ''
+    default: str = ''
+    example: str = ''
 
 
 @dataclass
@@ -46,34 +46,35 @@ class SQLParameter:
     name: str
     type: TypeEnum
     position: int
-    description: str
-    default: str
-    example: str
+    description: str = ''
+    default: str = ''
+    example: str = ''
 
 
 @dataclass
 class Object:
     name: Optional[str]
-    description: str
     fields: Dict[str, SchemaFieldType]
     many: Optional[bool]
     aggregate: Optional[bool]
     aggregation_field: Optional[str]
+    description: str = ''
 
 
 @dataclass
 class Select:
     endpoint: str
     params: Dict[str, str]
-    description: str
+    description: str = ''
 
 
 @dataclass
 class Field:
     type: TypeEnum
     db_name: str
-    example: str
-    description: str
+    xml_attribute: bool = False
+    example: str = ''
+    description: str = ''
 
 
 def _collect_selects(field: SchemaFieldType):

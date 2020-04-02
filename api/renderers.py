@@ -67,6 +67,8 @@ class ApiXmlRenderer(XMLRenderer):
 
     def xml_for_field(self, xml, item, parent_name, field: SchemaFieldType):
         if isinstance(field, Field):
+            if field.xml_attribute:
+                return
             xml.startElement(parent_name, {})
             xml.characters(force_text(item))
             xml.endElement(parent_name)
@@ -78,7 +80,9 @@ class ApiXmlRenderer(XMLRenderer):
         elif isinstance(field, Object):
             name = field.name or parent_name or 'item'
             if not field.many:
-                xml.startElement(name, {})
+                attributes = [key for key, value in field.fields.items() if isinstance(value, Field) and value.xml_attribute]
+                serialized_attributes = {key: force_text(item[key]) for key in attributes}
+                xml.startElement(name, serialized_attributes)
                 for key, value in field.fields.items():
                     self.xml_for_field(xml, item[key], key, value)
                 xml.endElement(name)
