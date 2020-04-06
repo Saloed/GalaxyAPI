@@ -116,7 +116,7 @@ class EndpointProcessor:
             'has_prev': has_prev,
             'prev': prev_link,
             'next': next_link,
-            'data': data
+            self.endpoint.name: data
         }
 
     def convert_single_record(self, record, field: SchemaFieldType, selected_data: EndpointSelectWrapper):

@@ -23,14 +23,12 @@ class ApiXmlRenderer(XMLRenderer):
 
         xml = SimplerXMLGenerator(stream, self.charset, short_empty_elements=True)
         xml.startDocument()
-        xml.startElement(self.root_tag_name, {})
 
         if self.is_error_response(data):
             self.render_error_response(xml, data)
         else:
             self.render_response(xml, data, endpoint)
 
-        xml.endElement(self.root_tag_name)
         xml.endDocument()
         return stream.getvalue()
 
@@ -38,21 +36,23 @@ class ApiXmlRenderer(XMLRenderer):
         return 'detail' in data and isinstance(data['detail'], ErrorDetail)
 
     def render_error_response(self, xml, data):
+        xml.startElement(self.root_tag_name, {})
         xml.startElement('error', {})
         xml.characters(force_text(data['detail']))
         xml.endElement('error')
+        xml.endElement(self.root_tag_name)
 
     def render_response(self, xml, data, endpoint):
         if endpoint.pagination_enabled:
-            for key, value in data.items():
-                xml.startElement(key, {})
-                if key != 'data':
-                    xml.characters(force_text(value))
-                else:
-                    self.xml_for_endpoint(xml, value, endpoint)
-                xml.endElement(key)
+            pagination_attributes = {key: force_text(data.get(key)) for key in ['has_next', 'has_prev', 'prev', 'next']}
+            content = data.get(endpoint.name, [])
+            xml.startElement(endpoint.name, pagination_attributes)
+            self.xml_for_endpoint(xml, content, endpoint)
+            xml.endElement(endpoint.name)
         else:
+            xml.startElement(endpoint.name, {})
             self.xml_for_endpoint(xml, data, endpoint)
+            xml.endElement(endpoint.name)
 
     def _to_xml(self, xml, data):
         return NotImplemented
