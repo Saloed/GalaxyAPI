@@ -21,7 +21,7 @@ class ApiXmlRenderer(XMLRenderer):
 
         stream = StringIO()
 
-        xml = SimplerXMLGenerator(stream, self.charset)
+        xml = SimplerXMLGenerator(stream, self.charset, short_empty_elements=True)
         xml.startDocument()
         xml.startElement(self.root_tag_name, {})
 
@@ -67,8 +67,6 @@ class ApiXmlRenderer(XMLRenderer):
 
     def xml_for_field(self, xml, item, parent_name, field: SchemaFieldType):
         if isinstance(field, Field):
-            if field.xml_attribute:
-                return
             xml.startElement(parent_name, {})
             xml.characters(force_text(item))
             xml.endElement(parent_name)
@@ -80,19 +78,26 @@ class ApiXmlRenderer(XMLRenderer):
         elif isinstance(field, Object):
             name = field.name or parent_name or 'item'
             if not field.many:
-                attributes = [key for key, value in field.fields.items() if isinstance(value, Field) and value.xml_attribute]
-                serialized_attributes = {key: force_text(item[key]) for key in attributes}
-                xml.startElement(name, serialized_attributes)
-                for key, value in field.fields.items():
-                    self.xml_for_field(xml, item[key], key, value)
-                xml.endElement(name)
+                self.xml_for_object_fields(xml, field, name, item)
             else:
                 xml.startElement(parent_name, {})
                 for element in item:
-                    xml.startElement(name, {})
-                    for key, value in field.fields.items():
-                        self.xml_for_field(xml, element[key], key, value)
-                    xml.endElement(name)
+                    self.xml_for_object_fields(xml, field, name, element)
                 xml.endElement(parent_name)
         else:
             raise ValueError(f"Unknown schema field type: {field}")
+
+    def xml_for_object_fields(self, xml, obj: Object, obj_name, item):
+        attributes = [key for key, value in obj.fields.items() if self.field_is_attribute(value)]
+        elements = [(key, value) for key, value in obj.fields.items() if not self.field_is_attribute(value)]
+        serialized_attributes = {key: force_text(item[key]) for key in attributes}
+        if not elements:
+            xml.addQuickElement(obj_name, attrs=serialized_attributes)
+            return
+        xml.startElement(obj_name, serialized_attributes)
+        for key, value in elements:
+            self.xml_for_field(xml, item[key], key, value)
+        xml.endElement(obj_name)
+
+    def field_is_attribute(self, field):
+        return isinstance(field, Field) and field.xml_attribute
