@@ -27,7 +27,9 @@ def get_image(config):
     return 'conyashka/galaxy-api:latest'
 
 
-def get_additional_flags(config, args):
+def get_additional_flags(config):
+    if config.debug:
+        return combine('--rm', '-it')
     return combine('--rm', '-d')
 
 
@@ -98,7 +100,7 @@ def get_descriptions(config):
     )
 
 
-def get_debug_mode(config):
+def get_debug_entrypoint(config):
     if not config.debug:
         return ''
     return '--entrypoint /bin/bash'
@@ -106,7 +108,8 @@ def get_debug_mode(config):
 def run(args):
     rel_config_path = args.config
     config = configparser.ConfigParser()
-    config.read(rel_config_path)
+    if not config.read(rel_config_path):
+        raise ValueError('Config file not specified')
 
     command = combine(
         'docker run',
@@ -116,8 +119,8 @@ def run(args):
         get_descriptions(config),
         get_log_file_mapping(config),
         get_ssl_config(config),
-        get_debug_mode(args),
-        get_additional_flags(config, args),
+        get_debug_entrypoint(args),
+        get_additional_flags(args),
         get_image(config)
     )
     os.system(command)
